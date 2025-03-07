@@ -60,10 +60,16 @@ else
     <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
         <MudTabPanel Text="1. Quantidade" Icon="@Icons.Material.Filled.Numbers">
             <MudText Typo="Typo.h6" Class="mb-4">Selecione a quantidade de tickets</MudText>
-            
-            <MudNumeric T="int" @bind-Value="_quantidade" Min="1" Max="50" Label="Quantidade de Tickets" 
-                      Variant="Variant.Outlined" Class="mb-4" />
-            
+
+            <MudTextField T="string"
+                          Label="Email"
+                          Variant="Variant.Outlined"
+                          @bind-Value="@_loginModel.Email"
+                          For="@(() => _loginModel.Email)"
+                          Immediate="true"
+                          Required="true"
+                          RequiredError="Email é obrigatório"
+                          Class="mb-4" />
             <MudSlider @bind-Value="_quantidade" Min="1" Max="50" 
                      Color="Color.Primary" 
                      ValueLabel="true" Class="py-4 mb-4" />
@@ -176,9 +182,9 @@ else
                     </MudItem>
                 </MudGrid>
             </MudPaper>
-            
-            <MudRadioGroup @bind-SelectedOption="_paymentMethod" Class="mb-4">
-                <MudRadio Option="@("pix")" Color="Color.Primary" Class="mb-2">
+
+            <MudRadioGroup T="string" @bind-Value="@_paymentMethod" Class="mb-4">
+                <MudRadio T="string" Value="@("pix")" Color="Color.Primary" Class="mb-2">
                     <div class="d-flex align-center">
                         <MudImage Src="/images/pix-logo.png" Height="24" Width="24" Class="mr-2" />
                         <div>
@@ -188,11 +194,11 @@ else
                     </div>
                 </MudRadio>
             </MudRadioGroup>
-            
-            <MudCheckBox @bind-Checked="_termsAccepted" 
-                       Label="Li e concordo com os termos e condições" 
-                       Color="Color.Primary" 
-                       Class="mb-4" />
+
+            <MudCheckBox T="bool" @bind-Checked="@_termsAccepted"
+                         Label="Li e concordo com os termos e condições"
+                         Color="Color.Primary"
+                         Class="mb-4" />
             
             <div class="d-flex justify-space-between mt-6">
                 <MudButton Variant="Variant.Outlined" 

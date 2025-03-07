@@ -1,13 +1,15 @@
 ﻿// RifaTech.UI/MauiProgram.cs (Ajustado)
 
+using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Hosting;
 using Microsoft.Maui.Hosting;
-using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor.Services;
-using Blazored.LocalStorage;
+using RifaTech.UI.Shared.Services;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ILocalStorageService = RifaTech.UI.Shared.Services.ILocalStorageService;
 
 namespace RifaTech.UI
 {
@@ -26,7 +28,9 @@ namespace RifaTech.UI
 
             // Registrar Local Storage
             builder.Services.AddBlazoredLocalStorage();
+            // RifaTech.UI/MauiProgram.cs (atualizado)
 
+            builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
             // Registrar MudBlazor
             builder.Services.AddMudServices();
 

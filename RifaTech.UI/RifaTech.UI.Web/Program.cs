@@ -1,10 +1,13 @@
 ﻿// RifaTech.UI.Web/Program.cs (Ajustado)
 
-using MudBlazor.Services;
-using Microsoft.AspNetCore.Components.Authorization;
 using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components.Authorization;
+using MudBlazor.Services;
+using RifaTech.UI.Shared.Services;
+using RifaTech.UI.Web.Components;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ILocalStorageService = RifaTech.UI.Shared.Services.ILocalStorageService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +42,10 @@ builder.Services.AddScoped(sp =>
 
 // Configurar Autenticação
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+// RifaTech.UI.Web/Program.cs (atualizado)
+
+// Registrar serviços
+builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 builder.Services.AddAuthorizationCore();
 
 var app = builder.Build();

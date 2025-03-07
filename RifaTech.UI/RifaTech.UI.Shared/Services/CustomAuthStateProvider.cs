@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 using System.Text.Json;
 using System.IdentityModel.Tokens.Jwt;
+using RifaTech.UI.Shared.Models;
+using RifaTech.UI.Shared.Services;
+using System.Net.Http.Json;
 
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {
@@ -35,7 +38,8 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             if (expiryDateUtc <= DateTime.UtcNow)
             {
                 // Token expirado, tentar refresh
-                return await RefreshTokenAsync();
+                var authState = await RefreshTokenAsync();
+                return authState;
             }
         }
 
@@ -61,7 +65,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                var result = await response.Content.ReadFromJsonAsync<TokenResponse>();
 
                 if (result.Flag)
                 {
@@ -92,12 +96,15 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         _http.DefaultRequestHeaders.Authorization = null;
 
         var anonymous = new ClaimsPrincipal(new ClaimsIdentity());
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymous)));
+        base.NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymous))); // Use 'base'
     }
 
-    public void NotifyAuthenticationStateChanged()
+    public void NotifyUserAuthentication(string token)
     {
-        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+        var claims = ParseClaimsFromJwt(token);
+        var authenticatedUser = new ClaimsPrincipal(new ClaimsIdentity(claims, "jwt"));
+        var authState = Task.FromResult(new AuthenticationState(authenticatedUser));
+        base.NotifyAuthenticationStateChanged(authState); // Use 'base' para acessar o método protegido
     }
 
     private IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
@@ -106,12 +113,6 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         var token = handler.ReadJwtToken(jwt);
         return token.Claims;
     }
-
-    private class LoginResponse
-    {
-        public bool Flag { get; set; }
-        public string Token { get; set; }
-        public string RefreshToken { get; set; }
-        public string Message { get; set; }
-    }
 }
+
+
