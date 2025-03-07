@@ -1,0 +1,209 @@
+﻿@page "/rifas/{Id:guid}"
+@using System.Net.Http.Json
+@using RifaTech.DTOs.DTOs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+
+<PageTitle>Detalhes da Rifa - RifaTech</PageTitle>
+
+@if (_loading)
+{
+    <div class="d-flex justify-center my-8">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else if (_rifa == null)
+{
+    <MudAlert Severity="Severity.Error" Class="my-4">Rifa não encontrada.</MudAlert>
+}
+else
+{
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4 mud-height-full">
+                <MudImage Src="@(string.IsNullOrEmpty(_rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{_rifa.Base64Img}")"
+                          Width="100 %" Height="400px" ObjectFit="ObjectFit.Cover" ObjectPosition="ObjectPosition.Center"
+                          Elevation="3" Class="rounded-lg" />
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4 mud-height-full">
+                <MudText Typo="Typo.h4" Class="mb-2">@_rifa.Name</MudText>
+
+                <MudDivider Class="my-4" />
+
+                <MudText Typo="Typo.body1" Class="mb-4">@_rifa.Description</MudText>
+
+                <MudGrid>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2">Preço do Ticket</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Primary">
+                            @_rifa.TicketPrice.ToString("C")
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2">Prêmio</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Secondary">
+                            @_rifa.PriceValue.ToString("C")
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2">Data do Sorteio</MudText>
+                        <MudText Typo="Typo.body1">
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
+                            @_rifa.DrawDateTime.ToString("dd/MM/yyyy HH:mm")
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2">Tickets Disponíveis</MudText>
+                        <MudText Typo="Typo.body1">
+                            @(_rifa.MaxTickets - (_rifa.Tickets?.Count ?? 0)) de @_rifa.MaxTickets
+                        </MudText>
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="my-4" />
+
+                <div class="mt-4">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Progresso das Vendas</MudText>
+                    <MudProgressLinear Color="Color.Info"
+                                       Value="@((_rifa.Tickets?.Count ?? 0) * 100 / Math.Max(1, _rifa.MaxTickets))"
+                                       Class="my-2" />
+                </div>
+
+                <MudDivider Class="my-4" />
+
+                <div class="d-flex justify-end mt-4 gap-2">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Share"
+                               OnClick="CompartilharRifa">
+                        Compartilhar
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Secondary"
+                               Size="Size.Large"
+                               OnClick="ComprarTickets">
+                        Comprar Tickets
+                    </MudButton>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        @if (_rifa.ExtraNumbers != null && _rifa.ExtraNumbers.Any())
+        {
+            <MudItem xs="12">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h5" Class="mb-4">Números Extras</MudText>
+
+                    <MudTable Items="_rifa.ExtraNumbers" Hover="true" Striped="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Número</MudTh>
+                            <MudTh>Prêmio</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Número">@context.Number</MudTd>
+                            <MudTd DataLabel="Prêmio">@context.PrizeAmount.ToString("C")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <MudDivider Class="my-6" />
+
+    <MudText Typo="Typo.h5" Class="mb-4">Últimos Tickets Vendidos</MudText>
+
+    @if (_tickets == null || !_tickets.Any())
+    {
+        <MudAlert Severity="Severity.Info">Nenhum ticket vendido ainda.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="@_tickets.Take(10)" Hover="true" Striped="true">
+            <HeaderContent>
+                <MudTh>Número</MudTh>
+                <MudTh>Cliente</MudTh>
+                <MudTh>Data</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Número">@context.Number</MudTd>
+                <MudTd DataLabel="Cliente">@GetClienteInitials(context.Cliente?.Name)</MudTd>
+                <MudTd DataLabel="Data">@context.CreatedAt.ToString("dd/MM/yyyy HH:mm")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+}
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private RifaDTO _rifa;
+    private List<TicketDTO> _tickets;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRifa();
+    }
+
+    private async Task LoadRifa()
+    {
+        try
+        {
+            _loading = true;
+            _rifa = await Http.GetFromJsonAsync<RifaDTO>($"api/rifas/{Id}");
+
+            // Carregando os tickets da rifa
+            _tickets = await Http.GetFromJsonAsync<List<TicketDTO>>($"api/rifa/{Id}/tickets");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar detalhes da rifa: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ComprarTickets()
+    {
+        Navigation.NavigateTo($"/rifas/{Id}/comprar");
+    }
+
+    private async Task CompartilharRifa()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters
+        {
+            { "RifaId", Id },
+            { "RifaNome", _rifa.Name },
+            { "RifaLink", $"{Navigation.BaseUri}rifas/{Id}" }
+        };
+
+        await DialogService.ShowAsync<ShareDialog>("Compartilhar Rifa", parameters, options);
+    }
+
+    private string GetClienteInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "?";
+
+        var parts = name.Split(' ');
+        if (parts.Length > 1)
+        {
+            return $"{parts[0][0]}{parts[1][0]}";
+        }
+
+        return parts[0].Length > 0 ? parts[0][0].ToString() : "?";
+    }
+}

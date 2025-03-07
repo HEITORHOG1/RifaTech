@@ -1,0 +1,86 @@
+﻿@using MudBlazor
+@using RifaTech.DTOs.DTOs
+
+<MudCard Elevation="3" Class="h-100 mud-rifa-card">
+    <MudCardMedia Image="@(string.IsNullOrEmpty(Rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{Rifa.Base64Img}")"
+                  Height="200" />
+    <MudCardContent>
+        <MudText Typo="Typo.h6" Class="mb-1">@Rifa.Name</MudText>
+        <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary text-truncate">
+            @Rifa.Description
+        </MudText>
+
+        <MudDivider Class="my-2" />
+
+        <MudText Typo="Typo.body2" Class="mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
+            Sorteio: @Rifa.DrawDateTime.ToString("dd/MM/yyyy")
+        </MudText>
+
+        <MudText Typo="Typo.body2" Class="mb-1">
+            <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" Class="mr-1" />
+            Valor: @Rifa.TicketPrice.ToString("C")
+        </MudText>
+
+        @if (Rifa.MaxTickets > 0)
+        {
+            var percentagem = CalcularPercentagemVendida();
+            var color = percentagem < 40 ? Color.Success :
+            percentagem < 70 ? Color.Warning :
+            Color.Error;
+
+            <div class="mt-2">
+                <MudText Typo="Typo.caption" Class="mb-1">
+                    Tickets disponíveis: @GetTicketsDisponiveisText()
+                </MudText>
+                <MudProgressLinear Color="@color" Value="@percentagem" Class="my-1" />
+            </div>
+        }
+    </MudCardContent>
+    <MudCardActions Class="d-flex justify-space-between">
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Primary"
+                   Href="@($"/rifas/{Rifa.Id}")">
+            Detalhes
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Secondary"
+                   Href="@($"/rifas/{Rifa.Id}/comprar")">
+            Comprar
+        </MudButton>
+    </MudCardActions>
+</MudCard>
+
+<style>
+    .mud-rifa-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .mud-rifa-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.2);
+        }
+</style>
+
+@code {
+    [Parameter]
+    public RifaDTO Rifa { get; set; }
+
+    private int CalcularPercentagemVendida()
+    {
+        if (Rifa.MaxTickets <= 0) return 0;
+
+        var ticketsVendidos = Rifa.Tickets?.Count ?? 0;
+        var porcentagem = (ticketsVendidos * 100) / Rifa.MaxTickets;
+
+        return porcentagem;
+    }
+
+    private string GetTicketsDisponiveisText()
+    {
+        var ticketsVendidos = Rifa.Tickets?.Count ?? 0;
+        var ticketsDisponveis = Rifa.MaxTickets - ticketsVendidos;
+
+        return $"{ticketsDisponveis} de {Rifa.MaxTickets}";
+    }
+}

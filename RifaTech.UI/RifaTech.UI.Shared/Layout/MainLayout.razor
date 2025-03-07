@@ -1,11 +1,16 @@
 ﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
-@inject ISnackbar Snackbar 
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ILocalStorageService LocalStorage
+@inject AuthenticationStateProvider AuthStateProvider
 
 <MudThemeProvider Theme="_currentTheme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
-<MudPopoverProvider /> @* Add this line to fix the popover error *@
+<MudPopoverProvider />
 
 <MudLayout>
     <MudAppBar Elevation="1" Color="Color.Primary">
@@ -21,10 +26,16 @@
         
         <MudSpacer />
         
-        <MudTooltip Text="Notificações" Placement="Placement.Bottom">
-            <MudIconButton Icon="@Icons.Material.Filled.Notifications" 
-                         Color="Color.Inherit" />
-        </MudTooltip>
+        @if (_isAuthenticated)
+        {
+            <MudTooltip Text="Notificações" Placement="Placement.Bottom">
+                <MudBadge Color="Color.Error" Content="@_notificationCount" Overlap>
+                    <MudIconButton Icon="@Icons.Material.Filled.Notifications" 
+                                 Color="Color.Inherit"
+                                 OnClick="OpenNotifications" />
+                </MudBadge>
+            </MudTooltip>
+        }
         
         <MudTooltip Text="@(_isDarkMode ? "Modo Claro" : "Modo Escuro")" 
                   Placement="Placement.Bottom">
@@ -33,31 +44,42 @@
                          OnClick="@ToggleTheme" />
         </MudTooltip>
         
-        <MudMenu Direction="Direction.Bottom" OffsetY="true">
-            <ActivatorContent>
-                <MudAvatar Color="Color.Secondary" Class="ml-3">U</MudAvatar>
-            </ActivatorContent>
-            <ChildContent>
-                <MudListItem T="object" Icon="@Icons.Material.Filled.Person" 
-                           Href="/perfil" 
-                           Text="Perfil" />
-                <MudListItem T="object" Icon="@Icons.Material.Filled.Settings" 
-                           Href="/configuracoes" 
-                           Text="Configurações" />
-                <MudDivider Class="my-2" />
-                <MudListItem T="object" Icon="@Icons.Material.Filled.Logout" 
-                           Text="Sair" 
-                           OnClick="() => Logout()" />
-            </ChildContent>
-        </MudMenu>
+        @if (_isAuthenticated)
+        {
+            <MudMenu Direction="Direction.Bottom" OffsetY="true">
+                <ActivatorContent>
+                    <MudAvatar Color="Color.Secondary" Class="ml-3">@_userInitials</MudAvatar>
+                </ActivatorContent>
+                <ChildContent>
+                    <MudListItem Icon="@Icons.Material.Filled.Person" 
+                               Href="/perfil" 
+                               Text="Perfil" />
+                    <MudListItem Icon="@Icons.Material.Filled.Settings" 
+                               Href="/configuracoes" 
+                               Text="Configurações" />
+                    <MudDivider Class="my-2" />
+                    <MudListItem Icon="@Icons.Material.Filled.Logout" 
+                               Text="Sair" 
+                               OnClick="Logout" />
+                </ChildContent>
+            </MudMenu>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled"
+                      Color="Color.Secondary"
+                      OnClick="@(() => Navigation.NavigateTo("/login"))">
+                Entrar
+            </MudButton>
+        }
     </MudAppBar>
     
-    <MudDrawer @bind-Open="@_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
         <MudDrawerHeader>
             <MudText Typo="Typo.h6">RifaTech</MudText>
             <MudText Typo="Typo.body2">Sistema de Rifas Online</MudText>
         </MudDrawerHeader>
-        <NavMenu />
+        <NavMenu IsAdmin="_isAdmin" />
     </MudDrawer>
 
     <MudMainContent>
@@ -70,22 +92,56 @@
 @code {
     private bool _drawerOpen = true;
     private bool _isDarkMode = false;
+    private bool _isAuthenticated = false;
+    private bool _isAdmin = false;
+    private int _notificationCount = 0;
+    private string _userInitials = "U";
     private MudTheme _currentTheme = new MudTheme();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Verificar tema salvo
+        var savedTheme = await LocalStorage.GetItemAsync<string>("theme");
+        if (savedTheme == "dark")
+        {
+            _isDarkMode = true;
+            ApplyTheme();
+        }
+        
+        // Verificar autenticação
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity.IsAuthenticated;
+        
+        if (_isAuthenticated)
+        {
+            _isAdmin = authState.User.IsInRole("Admin");
+            var name = authState.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
+            _userInitials = string.Join("", name.Split(' ').Select(n => n[0]));
+            
+            // Carregar notificações
+            await LoadNotifications();
+        }
+    }
 
     private void ToggleDrawer()
     {
         _drawerOpen = !_drawerOpen;
     }
 
-    private void ToggleTheme()
+    private async Task ToggleTheme()
     {
         _isDarkMode = !_isDarkMode;
-        
+        ApplyTheme();
+        await LocalStorage.SetItemAsync("theme", _isDarkMode ? "dark" : "light");
+    }
+    
+    private void ApplyTheme()
+    {
         if (_isDarkMode)
         {
             _currentTheme = new MudTheme
             {
-                PaletteLight = new PaletteLight
+                PaletteLight = new Palette
                 {
                     Primary = "#1E88E5",
                     Secondary = "#FF4081",
@@ -96,6 +152,7 @@
                     TextSecondary = "rgba(255,255,255, 0.60)",
                     DrawerText = "rgba(255,255,255, 0.87)",
                     Surface = "#1E1E1E",
+                    Success = "#4caf50"
                 }
             };
         }
@@ -103,23 +160,48 @@
         {
             _currentTheme = new MudTheme
             {
-                PaletteLight = new PaletteLight
+                PaletteLight = new Palette
                 {
                     Primary = "#1E88E5",
                     Secondary = "#FF4081",
                     AppbarBackground = "#1E88E5",
                     Background = "#F5F5F5",
                     Surface = "#FFFFFF",
+                    Success = "#4caf50"
                 }
             };
         }
     }
-    private void Logout()
+    
+    private async Task LoadNotifications()
     {
-        // Add logout logic here
-        Snackbar.Add("Logout realizado com sucesso", Severity.Info); @* Now using the correct Add method *@
+        // Exemplo: Carregar notificações da API
+        try {
+            _notificationCount = 3; // Substituir por chamada API
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Erro ao carregar notificações", Severity.Error);
+        }
+    }
+    
+    private void OpenNotifications()
+    {
+        Navigation.NavigateTo("/notificacoes");
+    }
+    
+    private async Task Logout()
+    {
+        await LocalStorage.RemoveItemAsync("authToken");
+        await LocalStorage.RemoveItemAsync("refreshToken");
         
-        // You'll need to implement proper authentication cleanup
-        // navigationManager.NavigateTo("/logout");
+        // Notificar o provedor de autenticação
+        if (AuthStateProvider is CustomAuthStateProvider authProvider)
+        {
+            await authProvider.LogoutAsync();
+        }
+        
+        Snackbar.Add("Logout realizado com sucesso", Severity.Success);
+        Navigation.NavigateTo("/");
     }
 }

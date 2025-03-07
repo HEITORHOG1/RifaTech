@@ -1,0 +1,103 @@
+﻿@using MudBlazor
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mb-4">Compartilhe esta rifa com seus amigos:</MudText>
+
+        <MudTextField @bind-Value="RifaLink"
+                      Label="Link da Rifa"
+                      ReadOnly="true"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Filled.ContentCopy"
+                      OnAdornmentClick="CopyToClipboard"
+                      Class="mb-4" />
+
+        <MudGrid>
+            <MudItem xs="3">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="@(() => ShareVia("whatsapp"))"
+                           FullWidth="true"
+                           Class="pa-2">
+                    <MudIcon Icon="@Icons.Custom.Brands.WhatsApp" />
+                </MudButton>
+            </MudItem>
+
+            <MudItem xs="3">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="@(() => ShareVia("facebook"))"
+                           FullWidth="true"
+                           Class="pa-2">
+                    <MudIcon Icon="@Icons.Custom.Brands.Facebook" />
+                </MudButton>
+            </MudItem>
+
+            <MudItem xs="3">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="@(() => ShareVia("twitter"))"
+                           FullWidth="true"
+                           Class="pa-2">
+                    <MudIcon Icon="@Icons.Custom.Brands.Twitter" />
+                </MudButton>
+            </MudItem>
+
+            <MudItem xs="3">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="@(() => ShareVia("email"))"
+                           FullWidth="true"
+                           Class="pa-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Email" />
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close">Fechar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Guid RifaId { get; set; }
+    [Parameter] public string RifaNome { get; set; }
+    [Parameter] public string RifaLink { get; set; }
+
+    private async Task CopyToClipboard()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", RifaLink);
+        Snackbar.Add("Link copiado para a área de transferência!", Severity.Success);
+    }
+
+    private async Task ShareVia(string platform)
+    {
+        string url = "";
+        string message = $"Confira esta rifa no RifaTech: {RifaNome}";
+
+        switch (platform)
+        {
+            case "whatsapp":
+                url = $"https://wa.me/?text={Uri.EscapeDataString(message + " " + RifaLink)}";
+                break;
+            case "facebook":
+                url = $"https://www.facebook.com/sharer/sharer.php?u={Uri.EscapeDataString(RifaLink)}";
+                break;
+            case "twitter":
+                url = $"https://twitter.com/intent/tweet?text={Uri.EscapeDataString(message)}&url={Uri.EscapeDataString(RifaLink)}";
+                break;
+            case "email":
+                url = $"mailto:?subject={Uri.EscapeDataString("Rifa: " + RifaNome)}&body={Uri.EscapeDataString(message + "\n\n" + RifaLink)}";
+                break;
+        }
+
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private void Close() => MudDialog.Close();
+}

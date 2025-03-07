@@ -1,0 +1,249 @@
+﻿@page "/login"
+@using RifaTech.DTOs.DTOs
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Login - RifaTech</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudPaper Elevation="3" Class="pa-8">
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-6">Entre no RifaTech</MudText>
+        
+        <MudTabs Elevation="0" Centered="true" Color="Color.Primary" Class="mt-4">
+            <MudTabPanel Text="Login" Icon="@Icons.Material.Filled.Login">
+                <EditForm Model="_loginModel" OnValidSubmit="ProcessLogin" Class="mt-4">
+                    <DataAnnotationsValidator />
+                    
+                    <MudTextField T="string"
+                                Label="Email"
+                                Variant="Variant.Outlined"
+                                @bind-Value="_loginModel.Email"
+                                For="@(() => _loginModel.Email)"
+                                Immediate="true"
+                                Required="true"
+                                RequiredError="Email é obrigatório"
+                                Class="mb-4" />
+                                
+                    <MudTextField T="string"
+                                Label="Senha"
+                                Variant="Variant.Outlined"
+                                @bind-Value="_loginModel.Password"
+                                For="@(() => _loginModel.Password)"
+                                Immediate="true"
+                                Required="true"
+                                RequiredError="Senha é obrigatória"
+                                InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                Adornment="Adornment.End"
+                                AdornmentIcon="@(_showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff)"
+                                AdornmentClick="() => _showPassword = !_showPassword"
+                                Class="mb-4" />
+                                
+                    <div class="d-flex justify-space-between align-center mb-6">
+                        <MudCheckBox T="bool" @bind-Checked="_rememberMe" Label="Lembrar de mim" />
+                        <MudLink Href="/esqueci-senha">Esqueci minha senha</MudLink>
+                    </div>
+                    
+                    <MudButton ButtonType="ButtonType.Submit"
+                              Variant="Variant.Filled"
+                              Color="Color.Primary"
+                              Size="Size.Large"
+                              FullWidth="true"
+                              Disabled="@_processing">
+                        @if (_processing)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Processando</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Entrar</MudText>
+                        }
+                    </MudButton>
+                </EditForm>
+            </MudTabPanel>
+            
+            <MudTabPanel Text="Cadastro" Icon="@Icons.Material.Filled.PersonAdd">
+                <EditForm Model="_registerModel" OnValidSubmit="ProcessRegistration" Class="mt-4">
+                    <DataAnnotationsValidator />
+                    
+                    <MudTextField T="string"
+                                Label="Nome Completo"
+                                Variant="Variant.Outlined"
+                                @bind-Value="_registerModel.Name"
+                                For="@(() => _registerModel.Name)"
+                                Immediate="true"
+                                Required="true"
+                                RequiredError="Nome é obrigatório"
+                                Class="mb-4" />
+                                
+                    <MudTextField T="string"
+                                Label="Email"
+                                Variant="Variant.Outlined"
+                                @bind-Value="_registerModel.Email"
+                                For="@(() => _registerModel.Email)"
+                                Immediate="true"
+                                Required="true"
+                                RequiredError="Email é obrigatório"
+                                Class="mb-4" />
+                                
+                    <MudTextField T="string"
+                                Label="CPF"
+                                Variant="Variant.Outlined"
+                                @bind-Value="_registerModel.CPF"
+                                For="@(() => _registerModel.CPF)"
+                                Immediate="true"
+                                Required="true"
+                                RequiredError="CPF é obrigatório"
+                                Class="mb-4" />
+                                
+                    <MudTextField T="string"
+                                Label="Senha"
+                                Variant="Variant.Outlined"
+                                @bind-Value="_registerModel.Password"
+                                For="@(() => _registerModel.Password)"
+                                Immediate="true"
+                                Required="true"
+                                RequiredError="Senha é obrigatória"
+                                InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                Adornment="Adornment.End"
+                                AdornmentIcon="@(_showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff)"
+                                AdornmentClick="() => _showPassword = !_showPassword"
+                                Class="mb-4" />
+                                
+                    <MudTextField T="string"
+                                Label="Confirmar Senha"
+                                Variant="Variant.Outlined"
+                                @bind-Value="_registerModel.ConfirmPassword"
+                                For="@(() => _registerModel.ConfirmPassword)"
+                                Immediate="true"
+                                Required="true"
+                                RequiredError="Confirmação de senha é obrigatória"
+                                InputType="@(_showPassword ? InputType.Text : InputType.Password)"
+                                Class="mb-6" />
+                                
+                    <MudButton ButtonType="ButtonType.Submit"
+                              Variant="Variant.Filled"
+                              Color="Color.Primary"
+                              Size="Size.Large"
+                              FullWidth="true"
+                              Disabled="@_processing">
+                        @if (_processing)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Processando</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Cadastrar</MudText>
+                        }
+                    </MudButton>
+                </EditForm>
+            </MudTabPanel>
+        </MudTabs>
+        
+        <MudDivider Class="mt-8 mb-4" />
+        
+        <MudText Align="Align.Center" Typo="Typo.body2" Class="mud-text-secondary">
+            Ao fazer login você concorda com nossos
+            <MudLink Href="/termos">Termos de Uso</MudLink> e
+            <MudLink Href="/privacidade">Política de Privacidade</MudLink>.
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private LoginDTO _loginModel = new();
+    private UserDTO _registerModel = new();
+    private bool _showPassword = false;
+    private bool _rememberMe = false;
+    private bool _processing = false;
+    
+    private async Task ProcessLogin()
+    {
+        _processing = true;
+        
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/manage/login", _loginModel);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                
+                if (result.Flag)
+                {
+                    await LocalStorage.SetItemAsync("authToken", result.Token);
+                    await LocalStorage.SetItemAsync("refreshToken", result.RefreshToken);
+                    
+                    if (_rememberMe)
+                    {
+                        await LocalStorage.SetItemAsync("email", _loginModel.Email);
+                    }
+                    
+                    // Notificar o provedor de autenticação
+                    if (AuthStateProvider is CustomAuthStateProvider authProvider)
+                    {
+                        await authProvider.NotifyAuthenticationStateChanged();
+                    }
+
+                    Snackbar.Add("Login realizado com sucesso!", Severity.Success);
+                    Navigation.NavigateTo("/");
+                }
+                else
+                {
+                    Snackbar.Add(result.Message, Severity.Error);
+                }
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Erro ao realizar login: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private async Task ProcessRegistration()
+    {
+        _processing = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/manage/register", _registerModel);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<dynamic>();
+                Snackbar.Add("Cadastro realizado com sucesso! Faça login para continuar.", Severity.Success);
+
+                // Limpar formulário e mudar para a aba de login
+                _registerModel = new UserDTO();
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Erro ao realizar cadastro: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}

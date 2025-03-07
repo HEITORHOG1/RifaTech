@@ -1,0 +1,113 @@
+﻿@page "/tickets/compra-sucesso/{RifaId:guid}"
+@using System.Net.Http.Json
+@using RifaTech.DTOs.DTOs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Compra Realizada - RifaTech</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Elevation="3" Class="pa-6">
+        <div class="d-flex flex-column align-center mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                   Color="Color.Success" 
+                   Size="Size.Large" 
+                   Class="mb-4" />
+            
+            <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">Compra Realizada com Sucesso!</MudText>
+            <MudText Typo="Typo.body1" Align="Align.Center">
+                Seus tickets foram gerados e estão disponíveis abaixo.
+            </MudText>
+        </div>
+        
+        @if (_loading)
+        {
+            <div class="d-flex justify-center my-4">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (_tickets == null || !_tickets.Any())
+        {
+            <MudAlert Severity="Severity.Warning" Class="my-4">
+                Seus tickets ainda estão sendo processados. Verifique na página "Meus Tickets" em alguns instantes.
+            </MudAlert>
+        }
+        else
+        {
+            <MudText Typo="Typo.h6" Class="mb-3">Seus Números:</MudText>
+            
+            <div class="d-flex flex-wrap gap-2 mb-6">
+                @foreach (var ticket in _tickets)
+                {
+                    <MudChip Color="Color.Primary" Size="Size.Large">
+                        @ticket.Number
+                    </MudChip>
+                }
+            </div>
+            
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                Guarde seus números! Você também pode acessá-los a qualquer momento na página "Meus Tickets".
+            </MudAlert>
+        }
+        
+        <MudDivider Class="my-4" />
+        
+        <div class="d-flex justify-center gap-2">
+            <MudButton Variant="Variant.Outlined"
+                     Color="Color.Primary"
+                     Href="/tickets/meus">
+                Meus Tickets
+            </MudButton>
+            
+            <MudButton Variant="Variant.Filled"
+                     Color="Color.Primary"
+                     Href="/rifas">
+                Continuar Comprando
+            </MudButton>
+        </div>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public Guid RifaId { get; set; }
+    
+    private List<TicketDTO> _tickets;
+    private bool _loading = true;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTickets();
+    }
+    
+    private async Task LoadTickets()
+    {
+        try
+        {
+            _loading = true;
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            
+            if (authState.User.Identity.IsAuthenticated)
+            {
+                var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                _tickets = await Http.GetFromJsonAsync<List<TicketDTO>>($"api/tickets/meus");
+                
+                // Filtrar apenas tickets da rifa atual e os mais recentes (últimas 24h)
+                var yesterday = DateTime.UtcNow.AddDays(-1);
+                _tickets = _tickets
+                    .Where(t => t.RifaId == RifaId && t.CreatedAt > yesterday)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar tickets: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,7 +1,10 @@
-﻿using MudBlazor.Services;
-using RifaTech.UI.Shared.Services;
-using RifaTech.UI.Web.Components;
-using RifaTech.UI.Web.Services;
+﻿// RifaTech.UI.Web/Program.cs (Ajustado)
+
+using MudBlazor.Services;
+using Microsoft.AspNetCore.Components.Authorization;
+using Blazored.LocalStorage;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,16 +13,34 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-builder.Services.AddMudServices(); // Add this line
-builder.Services.AddMudServices(); // Add this line to register MudBlazor services
+// Registrar MudBlazor
+builder.Services.AddMudServices();
 
-// Add device-specific services used by the RifaTech.UI.Shared project
-builder.Services.AddSingleton<IFormFactor, FormFactor>();
-// Add this to your existing Program.cs where services are configured
-builder.Services.AddScoped(sp => new HttpClient
+// Registrar Local Storage
+builder.Services.AddBlazoredLocalStorage();
+
+// Configurar HttpClient
+builder.Services.AddScoped(sp =>
 {
-    BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5024")
+    var httpClient = new HttpClient
+    {
+        BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5024")
+    };
+
+    // Configurar serialização JSON para evitar problemas com referências circulares
+    var options = new JsonSerializerOptions
+    {
+        ReferenceHandler = ReferenceHandler.Preserve,
+        PropertyNameCaseInsensitive = true
+    };
+
+    return httpClient;
 });
+
+// Configurar Autenticação
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+builder.Services.AddAuthorizationCore();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -30,12 +51,10 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.UseAntiforgery();
 
