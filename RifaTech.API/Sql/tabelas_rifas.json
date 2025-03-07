@@ -1,0 +1,156 @@
+[
+  {
+    "table": "AspNetRoleClaims",
+    "column": "RoleId",
+    "constraintName": "FK_AspNetRoleClaims_AspNetRoles_RoleId",
+    "referencedTable": "AspNetRoles",
+    "referencedColumn": "Id",
+    "dataType": "varchar",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 255
+  },
+  {
+    "table": "AspNetUserClaims",
+    "column": "UserId",
+    "constraintName": "FK_AspNetUserClaims_AspNetUsers_UserId",
+    "referencedTable": "AspNetUsers",
+    "referencedColumn": "Id",
+    "dataType": "varchar",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 255
+  },
+  {
+    "table": "AspNetUserLogins",
+    "column": "UserId",
+    "constraintName": "FK_AspNetUserLogins_AspNetUsers_UserId",
+    "referencedTable": "AspNetUsers",
+    "referencedColumn": "Id",
+    "dataType": "varchar",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 255
+  },
+  {
+    "table": "AspNetUserRoles",
+    "column": "RoleId",
+    "constraintName": "FK_AspNetUserRoles_AspNetRoles_RoleId",
+    "referencedTable": "AspNetRoles",
+    "referencedColumn": "Id",
+    "dataType": "varchar",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 255
+  },
+  {
+    "table": "AspNetUserRoles",
+    "column": "UserId",
+    "constraintName": "FK_AspNetUserRoles_AspNetUsers_UserId",
+    "referencedTable": "AspNetUsers",
+    "referencedColumn": "Id",
+    "dataType": "varchar",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 255
+  },
+  {
+    "table": "AspNetUserTokens",
+    "column": "UserId",
+    "constraintName": "FK_AspNetUserTokens_AspNetUsers_UserId",
+    "referencedTable": "AspNetUsers",
+    "referencedColumn": "Id",
+    "dataType": "varchar",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 255
+  },
+  {
+    "table": "Draws",
+    "column": "RifaId",
+    "constraintName": "FK_Draws_Rifas_RifaId",
+    "referencedTable": "Rifas",
+    "referencedColumn": "Id",
+    "dataType": "char",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 36
+  },
+  {
+    "table": "ExtraNumbers",
+    "column": "RifaId",
+    "constraintName": "FK_ExtraNumbers_Rifas_RifaId",
+    "referencedTable": "Rifas",
+    "referencedColumn": "Id",
+    "dataType": "char",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 36
+  },
+  {
+    "table": "Payments",
+    "column": "ClienteId",
+    "constraintName": "FK_Payments_Clientes_ClienteId",
+    "referencedTable": "Clientes",
+    "referencedColumn": "Id",
+    "dataType": "char",
+    "isNullable": "NO",
+    "default": "00000000-0000-0000-0000-000000000000",
+    "maxLength": 36
+  },
+  {
+    "table": "Payments",
+    "column": "TicketId",
+    "constraintName": "FK_Payments_Tickets_TicketId",
+    "referencedTable": "Tickets",
+    "referencedColumn": "Id",
+    "dataType": "char",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 36
+  },
+  {
+    "table": "Tickets",
+    "column": "ClienteId",
+    "constraintName": "FK_Tickets_Clientes_ClienteId",
+    "referencedTable": "Clientes",
+    "referencedColumn": "Id",
+    "dataType": "char",
+    "isNullable": "NO",
+    "default": "00000000-0000-0000-0000-000000000000",
+    "maxLength": 36
+  },
+  {
+    "table": "Tickets",
+    "column": "RifaId",
+    "constraintName": "FK_Tickets_Rifas_RifaId",
+    "referencedTable": "Rifas",
+    "referencedColumn": "Id",
+    "dataType": "char",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 36
+  },
+  {
+    "table": "UnpaidRifas",
+    "column": "ClienteId",
+    "constraintName": "FK_UnpaidRifas_Clientes_ClienteId",
+    "referencedTable": "Clientes",
+    "referencedColumn": "Id",
+    "dataType": "char",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 36
+  },
+  {
+    "table": "UnpaidRifas",
+    "column": "RifaId",
+    "constraintName": "FK_UnpaidRifas_Rifas_RifaId",
+    "referencedTable": "Rifas",
+    "referencedColumn": "Id",
+    "dataType": "char",
+    "isNullable": "NO",
+    "default": null,
+    "maxLength": 36
+  }
+]

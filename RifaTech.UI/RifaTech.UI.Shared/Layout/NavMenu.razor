@@ -1,0 +1,75 @@
+﻿@using MudBlazor
+@using static MudBlazor.Icons
+
+<MudNavMenu Dense="true" Class="mud-width-full">
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home" IconSize="Size.Small">Home</MudNavLink>
+    
+    <MudNavGroup Title="Rifas" Icon="@Icons.Material.Filled.CardGiftcard" IconSize="Size.Small" Expanded="true">
+        <MudNavLink Href="rifas" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List" IconSize="Size.Small">Todas as Rifas</MudNavLink>
+        <MudNavLink Href="rifas/minhas" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Bookmark" IconSize="Size.Small">Minhas Rifas</MudNavLink>
+        <MudNavLink Href="rifas/criar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add" IconSize="Size.Small">Criar Rifa</MudNavLink>
+    </MudNavGroup>
+    
+    <MudNavGroup Title="Tickets" Icon="@Icons.Material.Filled.ConfirmationNumber" IconSize="Size.Small" Expanded="false">
+        <MudNavLink Href="tickets/meus" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Receipt" IconSize="Size.Small">Meus Tickets</MudNavLink>
+        <MudNavLink Href="tickets/comprar" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ShoppingCart" IconSize="Size.Small">Comprar Tickets</MudNavLink>
+    </MudNavGroup>
+    
+    <MudDivider Class="my-2" />
+    <MudNavMenu Dense="true" Class="py-2">
+        <MudNavGroup Title="Navegação" Icon="@Icons.Material.Filled.Home" Expanded="true">
+            <MudNavLink Href="/" 
+                      Icon="@Icons.Material.Filled.Home" 
+                      IconColor="Color.Primary"
+                      Match="NavLinkMatch.All">
+                Home
+            </MudNavLink>
+        </MudNavGroup>
+    
+        <MudNavGroup Title="Rifas" 
+                   Icon="@Icons.Material.Filled.Receipt" 
+                   IconColor="Color.Secondary"
+                   Expanded="false">
+            <MudNavLink Href="/rifas" 
+                      Icon="@Icons.Material.Filled.ListAlt" 
+                      IconSize="Size.Small">
+                Todas as Rifas
+            </MudNavLink>
+            <MudNavLink Href="/rifas/criar" 
+                      Icon="@Icons.Material.Filled.AddCircle" 
+                      IconSize="Size.Small">
+                Nova Rifa
+            </MudNavLink>
+        </MudNavGroup>
+    
+        <MudNavGroup Title="Tickets" 
+                   Icon="@Icons.Material.Filled.ConfirmationNumber" 
+                   IconColor="Color.Tertiary"
+                   Expanded="false">
+            <MudNavLink Href="/tickets" 
+                      Icon="@Icons.Material.Filled.ConfirmationNumber" 
+                      IconSize="Size.Small">
+                Meus Tickets
+            </MudNavLink>
+        </MudNavGroup>
+    
+        <MudDivider Class="my-4" />
+    
+        <MudNavGroup Title="Ajuda" 
+                   Icon="@Icons.Material.Filled.Help" 
+                   IconColor="Color.Info"
+                   Expanded="false">
+            <MudNavLink Href="/sobre" 
+                      Icon="@Icons.Material.Filled.Info" 
+                      IconSize="Size.Small">
+                Sobre
+            </MudNavLink>
+            <MudNavLink Href="/contato" 
+                      Icon="@Icons.Material.Filled.ContactSupport" 
+                      IconSize="Size.Small">
+                Contato
+            </MudNavLink>
+        </MudNavGroup>
+    </MudNavMenu>
+</MudNavMenu>
+

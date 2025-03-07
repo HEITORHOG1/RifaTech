@@ -1,0 +1,83 @@
+﻿@page "/"
+@using System.Net.Http.Json
+@using MudBlazor
+@using RifaTech.DTOs.DTOs
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudText Typo="Typo.h3" Class="mb-4">Rifas Disponíveis</MudText>
+
+@if (_loading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else if (_rifas == null || !_rifas.Any())
+{
+    <MudAlert Severity="Severity.Info">Nenhuma rifa disponível no momento.</MudAlert>
+}
+else
+{
+    <MudGrid>
+        @foreach (var rifa in _rifas)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="3" Class="rounded-lg">
+                    <MudCardMedia Image="@(string.IsNullOrEmpty(rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{rifa.Base64Img}")" 
+                                  Height="200" />
+                    <MudCardContent>
+                        <MudText Typo="Typo.h5">@rifa.Name</MudText>
+                        <MudText Typo="Typo.body2">@rifa.Description</MudText>
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.body1">
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
+                            Sorteio: @rifa.DrawDateTime.ToString("dd/MM/yyyy")
+                        </MudText>
+                        <MudText Typo="Typo.body1">
+                            <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" Class="mr-1" />
+                            Valor: @rifa.PriceValue.ToString("C")
+                        </MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Filled" 
+                                  Color="Color.Primary" 
+                                  Link="@($"/rifas/{rifa.Id}")">
+                            Ver Detalhes
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined"
+                                  Color="Color.Secondary"
+                                  Link="@($"/rifas/{rifa.Id}/comprar")">
+                            Comprar
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private List<RifaDTO> _rifas;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRifas();
+    }
+
+    private async Task LoadRifas()
+    {
+        try
+        {
+            _loading = true;
+            _rifas = await Http.GetFromJsonAsync<List<RifaDTO>>("api/rifas");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Erro ao carregar rifas: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

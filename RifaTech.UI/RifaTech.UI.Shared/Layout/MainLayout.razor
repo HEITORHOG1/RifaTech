@@ -1,0 +1,125 @@
+﻿@inherits LayoutComponentBase
+@using MudBlazor
+@inject ISnackbar Snackbar 
+
+<MudThemeProvider Theme="_currentTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider /> @* Add this line to fix the popover error *@
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" 
+                     Color="Color.Inherit" 
+                     Edge="Edge.Start" 
+                     OnClick="@ToggleDrawer" />
+        
+        <MudText Typo="Typo.h5" Class="ml-2 mud-appbar-logo">
+            <MudIcon Icon="@Icons.Material.Filled.Casino" Class="mr-2" />
+            RifaTech
+        </MudText>
+        
+        <MudSpacer />
+        
+        <MudTooltip Text="Notificações" Placement="Placement.Bottom">
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" 
+                         Color="Color.Inherit" />
+        </MudTooltip>
+        
+        <MudTooltip Text="@(_isDarkMode ? "Modo Claro" : "Modo Escuro")" 
+                  Placement="Placement.Bottom">
+            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
+                         Color="Color.Inherit" 
+                         OnClick="@ToggleTheme" />
+        </MudTooltip>
+        
+        <MudMenu Direction="Direction.Bottom" OffsetY="true">
+            <ActivatorContent>
+                <MudAvatar Color="Color.Secondary" Class="ml-3">U</MudAvatar>
+            </ActivatorContent>
+            <ChildContent>
+                <MudListItem T="object" Icon="@Icons.Material.Filled.Person" 
+                           Href="/perfil" 
+                           Text="Perfil" />
+                <MudListItem T="object" Icon="@Icons.Material.Filled.Settings" 
+                           Href="/configuracoes" 
+                           Text="Configurações" />
+                <MudDivider Class="my-2" />
+                <MudListItem T="object" Icon="@Icons.Material.Filled.Logout" 
+                           Text="Sair" 
+                           OnClick="() => Logout()" />
+            </ChildContent>
+        </MudMenu>
+    </MudAppBar>
+    
+    <MudDrawer @bind-Open="@_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
+        <MudDrawerHeader>
+            <MudText Typo="Typo.h6">RifaTech</MudText>
+            <MudText Typo="Typo.body2">Sistema de Rifas Online</MudText>
+        </MudDrawerHeader>
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = false;
+    private MudTheme _currentTheme = new MudTheme();
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private void ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+        
+        if (_isDarkMode)
+        {
+            _currentTheme = new MudTheme
+            {
+                PaletteLight = new PaletteLight
+                {
+                    Primary = "#1E88E5",
+                    Secondary = "#FF4081",
+                    AppbarBackground = "#1E88E5",
+                    Background = "#121212",
+                    DrawerBackground = "#1F1F1F",
+                    TextPrimary = "rgba(255,255,255, 0.87)",
+                    TextSecondary = "rgba(255,255,255, 0.60)",
+                    DrawerText = "rgba(255,255,255, 0.87)",
+                    Surface = "#1E1E1E",
+                }
+            };
+        }
+        else
+        {
+            _currentTheme = new MudTheme
+            {
+                PaletteLight = new PaletteLight
+                {
+                    Primary = "#1E88E5",
+                    Secondary = "#FF4081",
+                    AppbarBackground = "#1E88E5",
+                    Background = "#F5F5F5",
+                    Surface = "#FFFFFF",
+                }
+            };
+        }
+    }
+    private void Logout()
+    {
+        // Add logout logic here
+        Snackbar.Add("Logout realizado com sucesso", Severity.Info); @* Now using the correct Add method *@
+        
+        // You'll need to implement proper authentication cleanup
+        // navigationManager.NavigateTo("/logout");
+    }
+}

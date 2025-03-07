@@ -1,0 +1,61 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34310.174
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C6A66427-8174-4A93-89EF-A9AE76F938DE}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RifaTech.API", "RifaTech.API\RifaTech.API.csproj", "{30F2186E-263C-4556-AA72-06793A9C4006}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RifaTech.DTOs", "RifaTech.DTOs\RifaTech.DTOs.csproj", "{1E2687C5-8EE0-4C3B-A91C-43F75A951D2E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RifaTech.UI", "RifaTech.UI\RifaTech.UI\RifaTech.UI.csproj", "{63FA7F12-25FE-44D9-8583-6BBA7A5FF469}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RifaTech.UI.Shared", "RifaTech.UI\RifaTech.UI.Shared\RifaTech.UI.Shared.csproj", "{3F52F5A5-F936-4B91-9DB5-FE54DD07EE90}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RifaTech.UI.Web", "RifaTech.UI\RifaTech.UI.Web\RifaTech.UI.Web.csproj", "{039B84BC-FE5A-4426-8DAC-4FE729F2E6FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RifaTech.UI.Web.Client", "RifaTech.UI\RifaTech.UI.Web.Client\RifaTech.UI.Web.Client.csproj", "{BF469CF4-75FF-4765-A313-AD3E87BF1664}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{30F2186E-263C-4556-AA72-06793A9C4006}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30F2186E-263C-4556-AA72-06793A9C4006}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30F2186E-263C-4556-AA72-06793A9C4006}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30F2186E-263C-4556-AA72-06793A9C4006}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E2687C5-8EE0-4C3B-A91C-43F75A951D2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E2687C5-8EE0-4C3B-A91C-43F75A951D2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E2687C5-8EE0-4C3B-A91C-43F75A951D2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E2687C5-8EE0-4C3B-A91C-43F75A951D2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63FA7F12-25FE-44D9-8583-6BBA7A5FF469}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63FA7F12-25FE-44D9-8583-6BBA7A5FF469}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63FA7F12-25FE-44D9-8583-6BBA7A5FF469}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63FA7F12-25FE-44D9-8583-6BBA7A5FF469}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F52F5A5-F936-4B91-9DB5-FE54DD07EE90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F52F5A5-F936-4B91-9DB5-FE54DD07EE90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F52F5A5-F936-4B91-9DB5-FE54DD07EE90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F52F5A5-F936-4B91-9DB5-FE54DD07EE90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{039B84BC-FE5A-4426-8DAC-4FE729F2E6FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{039B84BC-FE5A-4426-8DAC-4FE729F2E6FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{039B84BC-FE5A-4426-8DAC-4FE729F2E6FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{039B84BC-FE5A-4426-8DAC-4FE729F2E6FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF469CF4-75FF-4765-A313-AD3E87BF1664}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF469CF4-75FF-4765-A313-AD3E87BF1664}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF469CF4-75FF-4765-A313-AD3E87BF1664}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF469CF4-75FF-4765-A313-AD3E87BF1664}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{30F2186E-263C-4556-AA72-06793A9C4006} = {C6A66427-8174-4A93-89EF-A9AE76F938DE}
+		{1E2687C5-8EE0-4C3B-A91C-43F75A951D2E} = {C6A66427-8174-4A93-89EF-A9AE76F938DE}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F5938FA0-113D-48DF-AB0D-F1B4E87524C7}
+	EndGlobalSection
+EndGlobal
