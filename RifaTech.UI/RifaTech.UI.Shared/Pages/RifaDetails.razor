@@ -87,11 +87,19 @@ else
                         Compartilhar
                     </MudButton>
 
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.ShoppingCart"
+                               OnClick="ComprarTickets">
+                        Comprar Tickets
+                    </MudButton>
+
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Secondary"
                                Size="Size.Large"
-                               OnClick="ComprarTickets">
-                        Comprar Tickets
+                               StartIcon="@Icons.Material.Filled.FlashOn"
+                               Href="@($"/rifas/{Id}/compra-rapida")">
+                        Compra Rápida
                     </MudButton>
                 </div>
             </MudPaper>

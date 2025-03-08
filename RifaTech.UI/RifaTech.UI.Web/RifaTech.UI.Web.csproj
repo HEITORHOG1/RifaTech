@@ -10,6 +10,7 @@
     <PackageReference Include="MudBlazor" Version="8.3.0" />
     <ProjectReference Include="..\RifaTech.UI.Web.Client\RifaTech.UI.Web.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.0.0" />
+	  <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
   </ItemGroup>
 
 </Project>

@@ -61,7 +61,8 @@ namespace RifaTech.UI
             // Configurar Autenticação
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddAuthorizationCore();
-
+            builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
+            builder.Services.AddScoped<ClienteRecorrenteService>();
             builder.Services.AddMauiBlazorWebView();
 
 #if DEBUG
