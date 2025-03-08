@@ -12,6 +12,8 @@ namespace RifaTech.DTOs.Contracts
 
         Task<IEnumerable<RifaDTO>> GetAllRifasAsync();
 
+        Task<IEnumerable<RifaDTO>> GetFeaturedRifasAsync();
+
         Task DeleteRifaAsync(string id);
 
         Task<(IEnumerable<RifaDTO> Rifas, int TotalCount)> GetRifasPaginatedAsync(int pageNumber, int pageSize);

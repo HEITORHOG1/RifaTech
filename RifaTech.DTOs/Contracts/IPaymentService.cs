@@ -14,6 +14,6 @@ namespace RifaTech.DTOs.Contracts
 
         Task<PaymentDTO> CheckPaymentStatusAsync(Guid paymentId);
 
-        Task<PaymentDTO> IniciarPagamentoPix(RifaDTO rifa, int quantidade, decimal valorTotal, ClienteDTO cliente);
+        Task<PaymentDTO> IniciarPagamentoPix(Guid rifaId, int quantidade, decimal valorTotal, Guid clienteId);
     }
 }

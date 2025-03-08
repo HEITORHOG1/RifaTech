@@ -14,12 +14,18 @@ namespace RifaTech.API.Repositories
         private readonly AppDbContext _context;
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<PaymentService> _logger;
 
-        public PaymentService(AppDbContext context, IMapper mapper, IConfiguration configuration)
+        public PaymentService(
+            AppDbContext context,
+            IMapper mapper,
+            IConfiguration configuration,
+            ILogger<PaymentService> logger)
         {
             _context = context;
             _mapper = mapper;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<PaymentDTO> ProcessPaymentAsync(PaymentDTO paymentDto)
@@ -81,61 +87,138 @@ namespace RifaTech.API.Repositories
             };
         }
 
-        public async Task<PaymentDTO> IniciarPagamentoPix(RifaDTO rifa, int quantidade, decimal valorTotal, ClienteDTO cliente)
+        public async Task<PaymentDTO> IniciarPagamentoPix(Guid rifaId, int quantidade, decimal valorTotal, Guid clienteId)
         {
-            // Configurar o token de acesso do Mercado Pago
-            MercadoPagoConfig.AccessToken = _configuration["MercadoPago:AccessToken"];
-
-            // Criar uma instância de PaymentClient
-            var paymentClient = new PaymentClient();
-
-            // Criar a requisição de pagamento
-            var paymentRequest = new PaymentCreateRequest
-            {
-                TransactionAmount = valorTotal,
-                Description = rifa.Name,
-                PaymentMethodId = "pix",
-                Payer = new PaymentPayerRequest
-                {
-                    Email = cliente.Email,  // Substituir pelo e-mail do cliente
-                    FirstName = cliente.Name,
-                    Phone = new PaymentPhoneRequest
-                    {
-                        AreaCode = cliente.PhoneNumber.Substring(0, 2),  // Substituir pelo DDD do cliente
-                        Number = cliente.PhoneNumber.Substring(2)  // Substituir pelo número do cliente
-                    },
-                }
-                // Outras configurações do pagamento, se necessário
-            };
-
-            // Enviar a requisição e obter a resposta
-            MercadoPago.Resource.Payment.Payment paymentResponse;
-
             try
             {
-                paymentResponse = await paymentClient.CreateAsync(paymentRequest);
+                // Buscar informações da rifa e do cliente
+                var rifa = await _context.Rifas.FindAsync(rifaId);
+                if (rifa == null)
+                {
+                    throw new ArgumentException($"Rifa com ID {rifaId} não encontrada", nameof(rifaId));
+                }
+
+                var cliente = await _context.Clientes.FindAsync(clienteId);
+                if (cliente == null)
+                {
+                    throw new ArgumentException($"Cliente com ID {clienteId} não encontrado", nameof(clienteId));
+                }
+
+                // Configurar o token de acesso do Mercado Pago
+                string accessToken = _configuration["MercadoPago:AccessToken"];
+
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    throw new InvalidOperationException("Token de acesso do Mercado Pago não configurado");
+                }
+
+                MercadoPagoConfig.AccessToken = accessToken;
+
+                if (quantidade <= 0)
+                {
+                    throw new ArgumentException("Quantidade deve ser maior que zero", nameof(quantidade));
+                }
+
+                if (valorTotal <= 0)
+                {
+                    throw new ArgumentException("Valor total deve ser maior que zero", nameof(valorTotal));
+                }
+
+                // Criar a requisição de pagamento
+                var paymentClient = new PaymentClient();
+
+                // Preparar telefone do cliente
+                string phoneNumber = cliente.PhoneNumber?.Replace("+", "").Replace("-", "").Replace(" ", "").Trim() ?? "";
+                string areaCode = "11"; // Padrão
+                string number = phoneNumber;
+
+                // Tentar extrair DDD
+                if (phoneNumber.Length >= 2)
+                {
+                    areaCode = phoneNumber.Substring(0, 2);
+                    number = phoneNumber.Substring(2);
+                }
+
+                // Criar descrição do pagamento
+                string descricao = $"Compra de {quantidade} número(s) na rifa: {rifa.Name}";
+
+                // Configurar expiração (30 minutos)
+                DateTime expiracao = DateTime.UtcNow.AddMinutes(30);
+
+                var paymentRequest = new PaymentCreateRequest
+                {
+                    TransactionAmount = (decimal)valorTotal,
+                    Description = descricao,
+                    PaymentMethodId = "pix",
+                    DateOfExpiration = expiracao,
+                    Payer = new PaymentPayerRequest
+                    {
+                        Email = cliente.Email,
+                        FirstName = cliente.Name?.Split(' ').FirstOrDefault() ?? "Cliente",
+                        LastName = cliente.Name?.Split(' ').Skip(1).FirstOrDefault() ?? "",
+                        // Remova a propriedade Identification temporariamente
+                        Phone = new PaymentPayerPhoneRequest
+                        {
+                            AreaCode = areaCode,
+                            Number = number
+                        }
+                    }
+                };
+
+                // Enviar a requisição e obter a resposta
+                MercadoPago.Resource.Payment.Payment paymentResponse;
+
+                try
+                {
+                    paymentResponse = await paymentClient.CreateAsync(paymentRequest);
+                    _logger.LogInformation($"Pagamento PIX criado: ID {paymentResponse.Id}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao iniciar pagamento PIX com Mercado Pago");
+                    throw new Exception("Erro ao iniciar pagamento PIX. Por favor, tente novamente.", ex);
+                }
+
+                // Criar a entidade de pagamento
+                var payment = new Payment
+                {
+                    ClienteId = cliente.Id,
+                    Method = "PIX",
+                    Amount = (float)valorTotal,
+                    IsConfirmed = false,
+                    QrCodeBase64 = paymentResponse.PointOfInteraction?.TransactionData?.QrCodeBase64 ?? "",
+                    QrCode = paymentResponse.PointOfInteraction?.TransactionData?.QrCode ?? "",
+                    Status = PaymentStatus.Pending,
+                    ExpirationTime = expiracao,
+                    PaymentId = paymentResponse.Id
+                };
+
+                // Salvar o pagamento
+                _context.Payments.Add(payment);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Salvo pagamento {payment.Id} no banco de dados");
+
+                // Retornar o DTO
+                return _mapper.Map<PaymentDTO>(payment);
             }
             catch (Exception ex)
             {
-                // Tratar erros de comunicação com a API do Mercado Pago
-                throw new Exception("Erro ao iniciar pagamento PIX", ex);
+                _logger.LogError(ex, $"Erro ao iniciar pagamento PIX para rifa");
+                throw;
             }
-            // Converter a resposta para a entidade Payment da aplicação
-            var payment = new PaymentDTO
+        }
+
+        // Método auxiliar para atualizar o status do ticket
+        private async Task UpdateTicketStatusAsync(Guid ticketId)
+        {
+            var ticket = await _context.Tickets.FindAsync(ticketId);
+            if (ticket != null)
             {
-                ClienteId = cliente.Id,  // Converter o ID do cliente
-                TicketId = Guid.NewGuid(),  // Supondo que você gere um TicketId aqui
-                Amount = (float)valorTotal,
-                Method = "PIX",
-                IsConfirmed = false,  // Inicialmente, o pagamento não está confirmado
-                                      // Outros campos como QrCodeBase64, se necessário
-                                      // Por exemplo:
-                QrCodeBase64 = paymentResponse.PointOfInteraction.TransactionData.QrCodeBase64,
-                QrCode = paymentResponse.PointOfInteraction.TransactionData.QrCode,
-                PaymentId = paymentResponse.Id,
-            };
-            // Retornar a resposta do pagamento
-            return payment;
+                ticket.EhValido = true;
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"Ticket {ticketId} atualizado para válido após confirmação de pagamento");
+            }
         }
     }
 }

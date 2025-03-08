@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using RifaTech.API;
 using RifaTech.API.Context;
 using RifaTech.API.Endpoints;
+using RifaTech.API.Exceptions;
 using RifaTech.API.Extensions;
-using RifaTech.API.MAPs;
-using Swashbuckle.AspNetCore.Filters;
-using System.Security.Claims;
+using RifaTech.API.Middleware;
+using RifaTech.API.Services;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -18,117 +17,167 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddAutoMapper(typeof(MappingProfile));
+// Add application services
+builder.Services.AddApplicationServices();
 
-builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages();
-builder.Services.AddControllers();
-
-string mySqlConnection =
-    builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new
-    Exception("A string de conexão 'DefaultConnection' não foi configurada.");
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(mySqlConnection, ServerVersion.AutoDetect(mySqlConnection)));
-
-//Add Identity & JWT authentication
-//Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<AppDbContext>()
-    .AddSignInManager()
-    .AddRoles<IdentityRole>();
-
-builder.Services.AddControllers().AddJsonOptions(options =>
+// Add background services
+builder.Services.AddHostedService<PaymentStatusVerificationService>();
+builder.Services.AddSwaggerGen(c =>
 {
-    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
-    options.JsonSerializerOptions.WriteIndented = true;
-});
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "RifaTech API", Version = "v1" });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: "MyCorsPolicy", builder =>
+    // Add JWT Authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        builder.WithOrigins("https://localhost:7212/")
-               .AllowAnyHeader()
-               .AllowAnyMethod();
+        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
     });
 });
-// JWT
+
+// Add Memory Cache
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+
+// Add DbContext
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+// Add Response Caching
+builder.Services.AddResponseCaching();
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
+
+// Add Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
+// Configure JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(options =>
+})
+.AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidateIssuerSigningKey = true,
         ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
-        // Adicionando NameClaimType e RoleClaimType
-        NameClaimType = ClaimTypes.Name,
-        RoleClaimType = ClaimTypes.Role
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
     };
 });
 
-//Add authentication to Swagger UI
-builder.Services.AddSwaggerGen(options =>
+// Configure Authorization Policies
+builder.Services.AddAuthorization(options =>
 {
-    options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
-    {
-        In = ParameterLocation.Header,
-        Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey
-    });
+    // Policy for Admin access
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
 
-    options.OperationFilter<SecurityRequirementsOperationFilter>();
+    // Policy for authenticated users (both Admin and regular users)
+    options.AddPolicy("AuthenticatedUser", policy => policy.RequireAuthenticatedUser());
 });
 
-builder.Services.AddApplicationServices();//registro de serviços
-builder.Services.AddAuthentication().AddBearerToken();
-builder.Services.AddAuthorization();
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
+// Add application services
+builder.Services.AddApplicationServices();
+
+// Add JSON serialization options to handle circular references
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
+
+// Initialize roles
+await builder.Services.InitializeRoles(builder.Services.BuildServiceProvider());
 
 var app = builder.Build();
-await builder.Services.InitializeRoles(app.Services);
-// configura o middleware de exceção
-app.UseStatusCodePages(async statusCodeContext
-    => await Results.Problem(statusCode: statusCodeContext.HttpContext.Response.StatusCode)
-        .ExecuteAsync(statusCodeContext.HttpContext));
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "RifaTech API");
-
-        // Adicione a seção de autenticação com token Bearer
-        c.OAuthClientId("swagger-ui");
-        c.OAuthAppName("Swagger UI");
-    });
-    app.UseWebAssemblyDebugging();
+    app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
 }
 
-//app.MapIdentityApi<ApplicationUser>();
-app.RegisterAccountEndpoints();
 app.UseHttpsRedirection();
-app.UseBlazorFrameworkFiles();
-app.UseStaticFiles();
+
+// Use Response Caching
+app.UseResponseCaching();
+
+// Add cache control middleware
+app.Use(async (context, next) =>
+{
+    // Set Cache-Control header for public endpoints
+    if (context.Request.Path.StartsWithSegments("/rifas") ||
+        context.Request.Path.StartsWithSegments("/rifa"))
+    {
+        context.Response.Headers.Append("Cache-Control", "public,max-age=60"); // 1 minute
+    }
+
+    await next();
+});
+
+// Use CORS
+app.UseCors("AllowAll");
+
+// Use authentication and authorization
 app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
-app.MapFallbackToFile("index.html");
+
+// Use admin auth middleware to identify admin users
+app.UseAdminAuth();
+
+// Register endpoints
+app.RegisterAccountEndpoints();
 app.RegisterRifaEndpoints();
+app.RegisterClienteEndpoints();
 app.RegisterTicketEndpoints();
 app.RegisterPaymentEndpoints();
-app.RegisterExtraNumberEndpoints();
 app.RegisterDrawEndpoints();
-app.RegisterClienteEndpoints();
+app.RegisterExtraNumberEndpoints();
 app.RegisterUnpaidRifaEndpoints();
+app.RegisterRifaMetricsEndpoints();
+app.RegisterCompraRapidaEndpoints();
+
 app.Run();

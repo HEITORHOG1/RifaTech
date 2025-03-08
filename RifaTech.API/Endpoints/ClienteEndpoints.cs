@@ -1,4 +1,5 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Models;
 using RifaTech.DTOs.Contracts;
 using RifaTech.DTOs.DTOs;
 
@@ -6,6 +7,7 @@ public static class ClienteEndpoints
 {
     public static void RegisterClienteEndpoints(this IEndpointRouteBuilder app)
     {
+        // Admin only
         app.MapGet("/clientes", async (IClienteService clienteService, ILogger<Program> logger) =>
         {
             try
@@ -21,6 +23,7 @@ public static class ClienteEndpoints
             }
         })
         .WithName("GetAllClientes")
+        .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Listar todos os clientes",
@@ -28,6 +31,7 @@ public static class ClienteEndpoints
             Tags = new List<OpenApiTag> { new() { Name = "Clientes" } }
         });
 
+        // Admin only
         app.MapGet("/clientes/{id}", async (Guid id, IClienteService clienteService, ILogger<Program> logger) =>
         {
             try
@@ -51,6 +55,7 @@ public static class ClienteEndpoints
             }
         })
         .WithName("GetClienteById")
+        .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Obter detalhes de um cliente",
@@ -58,6 +63,7 @@ public static class ClienteEndpoints
             Tags = new List<OpenApiTag> { new() { Name = "Clientes" } }
         });
 
+        // Public - Allow anonymous for client creation during compra-rapida
         app.MapPost("/clientes", async (ClienteDTO clienteDto, IClienteService clienteService, ILogger<Program> logger) =>
         {
             try
@@ -73,6 +79,7 @@ public static class ClienteEndpoints
             }
         })
         .WithName("CreateCliente")
+        .AllowAnonymous() // Allow anonymous for client creation
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Criar um novo cliente",
@@ -80,6 +87,7 @@ public static class ClienteEndpoints
             Tags = new List<OpenApiTag> { new() { Name = "Clientes" } }
         });
 
+        // Admin only
         app.MapPut("/clientes/{id}", async (Guid id, ClienteDTO updatedClienteDto, IClienteService clienteService, ILogger<Program> logger) =>
         {
             try
@@ -102,6 +110,7 @@ public static class ClienteEndpoints
             }
         })
         .WithName("UpdateCliente")
+        .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Atualizar um cliente",
@@ -109,6 +118,7 @@ public static class ClienteEndpoints
             Tags = new List<OpenApiTag> { new() { Name = "Clientes" } }
         });
 
+        // Admin only
         app.MapDelete("/clientes/{id}", async (Guid id, IClienteService clienteService, ILogger<Program> logger) =>
         {
             try
@@ -131,6 +141,7 @@ public static class ClienteEndpoints
             }
         })
         .WithName("DeleteCliente")
+        .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Deletar um cliente",
@@ -138,8 +149,13 @@ public static class ClienteEndpoints
             Tags = new List<OpenApiTag> { new() { Name = "Clientes" } }
         });
 
-        //criar o endpoint GetClienteByEmailOrPhoneNumberOrCPF
-        app.MapGet("/clientes/{email}/{phoneNumber}/{cpf}", async (string email, string phoneNumber, string cpf, IClienteService clienteService, ILogger<Program> logger) =>
+        // Public - Allow anonymous for lookup during compra-rapida
+        app.MapGet("/clientes/lookup", async (
+            [FromQuery] string email,
+            [FromQuery] string phoneNumber,
+            [FromQuery] string cpf,
+            IClienteService clienteService,
+            ILogger<Program> logger) =>
         {
             try
             {
@@ -160,11 +176,13 @@ public static class ClienteEndpoints
                 logger.LogError(ex, $"Error retrieving cliente with email {email} or phoneNumber {phoneNumber} or cpf {cpf}");
                 throw;
             }
-        }).WithName("")
+        })
+        .WithName("GetClienteByLookup")
+        .AllowAnonymous() // Allow anonymous for client lookup
         .WithOpenApi(x => new OpenApiOperation(x)
         {
-            Summary = "Obter detalhes de um cliente",
-            Description = "Retorna os detalhes de um cliente específico pelo email, phoneNumber ou cpf.",
+            Summary = "Buscar cliente por contato",
+            Description = "Retorna os detalhes de um cliente específico pelo email, telefone ou CPF.",
             Tags = new List<OpenApiTag> { new() { Name = "Clientes" } }
         });
     }

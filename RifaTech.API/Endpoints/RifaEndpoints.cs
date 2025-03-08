@@ -9,6 +9,8 @@ namespace RifaTech.API.Endpoints
     {
         public static void RegisterRifaEndpoints(this IEndpointRouteBuilder app)
         {
+            // Public endpoints - no authentication required
+
             app.MapGet("/rifas", async (IRifaService rifaService, ILogger<Program> logger) =>
             {
                 try
@@ -20,10 +22,11 @@ namespace RifaTech.API.Endpoints
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Error retrieving rifas");
-                    throw; // O middleware de tratamento de exceções capturará isso
+                    throw;
                 }
             })
             .WithName("GetRifas")
+            .AllowAnonymous() // Explicitly allow anonymous access
             .WithOpenApi(x => new OpenApiOperation(x)
             {
                 Summary = "Listar todas as rifas",
@@ -50,16 +53,43 @@ namespace RifaTech.API.Endpoints
                 catch (Exception ex)
                 {
                     logger.LogError(ex, $"Error retrieving rifa with ID {id}");
-                    throw; // O middleware de tratamento de exceções capturará isso
+                    throw;
                 }
             })
             .WithName("GetRifaById")
+            .AllowAnonymous() // Explicitly allow anonymous access
             .WithOpenApi(x => new OpenApiOperation(x)
             {
                 Summary = "Obter detalhes de uma rifa",
                 Description = "Retorna os detalhes de uma rifa específica pelo ID.",
                 Tags = new List<OpenApiTag> { new() { Name = "Rifas" } }
             });
+
+            app.MapGet("/rifas/destaque", async (IRifaService rifaService, ILogger<Program> logger) =>
+            {
+                try
+                {
+                    // Assume we have a new method in the service to get featured rifas
+                    var rifasDestaque = await rifaService.GetFeaturedRifasAsync();
+                    logger.LogInformation("Retrieved featured rifas successfully");
+                    return Results.Ok(rifasDestaque);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error retrieving featured rifas");
+                    throw;
+                }
+            })
+            .WithName("GetFeaturedRifas")
+            .AllowAnonymous() // Explicitly allow anonymous access
+            .WithOpenApi(x => new OpenApiOperation(x)
+            {
+                Summary = "Listar rifas em destaque",
+                Description = "Retorna uma lista das rifas em destaque.",
+                Tags = new List<OpenApiTag> { new() { Name = "Rifas" } }
+            });
+
+            // Admin-only endpoints - require admin authentication
 
             app.MapPost("/rifas", async (RifaDTO rifa, IRifaService rifaService, ILogger<Program> logger) =>
             {
@@ -73,10 +103,11 @@ namespace RifaTech.API.Endpoints
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Error creating rifa");
-                    throw; // O middleware de tratamento de exceções capturará isso
+                    throw;
                 }
             })
             .WithName("CreateRifa")
+            .RequireAuthorization(policy => policy.RequireRole("Admin")) // Require Admin role
             .WithOpenApi(x => new OpenApiOperation(x)
             {
                 Summary = "Criar uma nova rifa",
@@ -113,10 +144,11 @@ namespace RifaTech.API.Endpoints
                 catch (Exception ex)
                 {
                     logger.LogError(ex, $"Error updating rifa with ID {id}");
-                    return Results.Problem(ex.Message); // Retorna um status de erro com a mensagem da exceção
+                    return Results.Problem(ex.Message);
                 }
             })
             .WithName("UpdateRifa")
+            .RequireAuthorization(policy => policy.RequireRole("Admin")) // Require Admin role
             .WithOpenApi(x => new OpenApiOperation(x)
             {
                 Summary = "Atualizar uma rifa",
@@ -128,7 +160,6 @@ namespace RifaTech.API.Endpoints
             {
                 try
                 {
-                    // Chama o método de serviço que marca a rifa como deletada, em vez de deletá-la
                     await rifaService.MarkRifaAsDeletedAsync(id);
                     logger.LogInformation($"Marked rifa with ID {id} as deleted successfully");
                     return Results.Ok();
@@ -136,14 +167,51 @@ namespace RifaTech.API.Endpoints
                 catch (Exception ex)
                 {
                     logger.LogError(ex, $"Error marking rifa with ID {id} as deleted");
-                    throw; // O middleware de tratamento de exceções capturará isso
+                    throw;
                 }
             })
             .WithName("DeleteRifa")
+            .RequireAuthorization(policy => policy.RequireRole("Admin")) // Require Admin role
             .WithOpenApi(x => new OpenApiOperation(x)
             {
                 Summary = "Deletar uma rifa",
                 Description = "Marca uma rifa existente como deletada, em vez de remover fisicamente do banco de dados.",
+                Tags = new List<OpenApiTag> { new() { Name = "Rifas" } }
+            });
+
+            // Endpoint for paginated rifas (public)
+            app.MapGet("/rifas/paginated", async (
+                int pageNumber,
+                int pageSize,
+                string? searchTerm,
+                DateTime? startDate,
+                DateTime? endDate,
+                IRifaService rifaService,
+                ILogger<Program> logger) =>
+            {
+                try
+                {
+                    var (rifas, totalCount) = await rifaService.GetRifasPaginatedAsync(
+                        pageNumber,
+                        pageSize,
+                        searchTerm,
+                        startDate,
+                        endDate);
+
+                    return Results.Ok(new { Items = rifas, TotalCount = totalCount });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error retrieving paginated rifas");
+                    throw;
+                }
+            })
+            .WithName("GetRifasPaginated")
+            .AllowAnonymous() // Explicitly allow anonymous access
+            .WithOpenApi(x => new OpenApiOperation(x)
+            {
+                Summary = "Listar rifas com paginação",
+                Description = "Retorna uma lista de rifas com paginação e opções de filtro.",
                 Tags = new List<OpenApiTag> { new() { Name = "Rifas" } }
             });
         }

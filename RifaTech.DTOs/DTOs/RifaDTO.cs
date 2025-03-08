@@ -1,4 +1,6 @@
-﻿namespace RifaTech.DTOs.DTOs
+﻿using System.Text.Json.Serialization;
+
+namespace RifaTech.DTOs.DTOs
 {
     public class RifaDTO
     {
@@ -19,7 +21,6 @@
         public string? RifaLink { get; set; } // Link da rifa
         public string? UniqueId { get; set; } // Campo para o link único
 
-
         // Relacionamento com Tickets
         public List<TicketDTO> Tickets { get; set; } = new();
 
@@ -28,5 +29,23 @@
 
         public bool? EhDeleted { get; set; }
         public decimal PriceValue { get; set; }
+
+        // Campos calculados para UI
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? ProgressPercentage { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? TimeRemaining { get; set; }
+
+        // Informações do sorteio
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public bool? IsDone => DrawDateTime < DateTime.UtcNow;
+
+        // Estatísticas
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? TicketsSold => Tickets?.Count ?? 0;
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? TicketsRemaining => MaxTickets - (Tickets?.Count ?? 0);
     }
 }

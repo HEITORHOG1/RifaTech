@@ -1,4 +1,5 @@
 ﻿using Microsoft.OpenApi.Models;
+using RifaTech.API.Services;
 using RifaTech.DTOs.Contracts;
 using RifaTech.DTOs.DTOs;
 
@@ -17,16 +18,17 @@ public static class TicketEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, $"Error retrieving tickets for rifa ID {rifaId}");
-                throw; // O middleware de tratamento de exceções capturará isso
+                throw;
             }
         })
-        .WithName("GetTicketsByRifa")
-        .WithOpenApi(x => new OpenApiOperation(x)
-        {
-            Summary = "Listar todos os tickets de uma rifa",
-            Description = "Retorna todos os tickets associados a uma rifa específica.",
-            Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
-        });
+         .WithName("GetTicketsByRifa")
+         .AllowAnonymous() // Allow anonymous access
+         .WithOpenApi(x => new OpenApiOperation(x)
+         {
+             Summary = "Listar todos os tickets de uma rifa",
+             Description = "Retorna todos os tickets associados a uma rifa específica.",
+             Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
+         });
 
         app.MapGet("/ticket/{id}", async (string id, ITicketService ticketService, ILogger<Program> logger) =>
         {
@@ -47,38 +49,41 @@ public static class TicketEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, $"Error retrieving ticket with ID {id}");
-                throw; // O middleware de tratamento de exceções capturará isso
+                throw;
             }
         })
-        .WithName("GetTicketById")
-        .WithOpenApi(x => new OpenApiOperation(x)
-        {
-            Summary = "Obter detalhes de um ticket",
-            Description = "Retorna os detalhes de um ticket específico pelo ID.",
-            Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
-        });
+         .WithName("GetTicketById")
+         .AllowAnonymous() // Allow anonymous access
+         .WithOpenApi(x => new OpenApiOperation(x)
+         {
+             Summary = "Obter detalhes de um ticket",
+             Description = "Retorna os detalhes de um ticket específico pelo ID.",
+             Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
+         });
 
+        // Traditional purchase - requires authentication
         app.MapPost("/rifa/{rifaId}/buy-ticket", async (string rifaId, TicketDTO ticket, ITicketService ticketService, ILogger<Program> logger) =>
         {
             try
             {
                 var purchasedTicket = await ticketService.PurchaseTicketAsync(rifaId, ticket);
-                logger.LogInformation($"Purchased ticket with ID {purchasedTicket} for rifa ID {rifaId} successfully");
+                logger.LogInformation($"Purchased ticket for rifa ID {rifaId} successfully");
                 return Results.Ok(new { purchasedTicket });
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, $"Error purchasing ticket for rifa ID {rifaId}");
-                throw; // O middleware de tratamento de exceções capturará isso
+                throw;
             }
         })
-         .WithName("BuyTicket")
-         .WithOpenApi(x => new OpenApiOperation(x)
-         {
-             Summary = "Comprar um ticket",
-             Description = "Permite a um usuário comprar um ticket para uma rifa específica.",
-             Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
-         });
+        .WithName("BuyTicket")
+        .RequireAuthorization(policy => policy.RequireAuthenticatedUser()) // Require authentication
+        .WithOpenApi(x => new OpenApiOperation(x)
+        {
+            Summary = "Comprar um ticket",
+            Description = "Permite a um usuário autenticado comprar um ticket para uma rifa específica.",
+            Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
+        });
 
         app.MapPut("/ticket/{id}", async (string id, TicketDTO updatedTicket, ITicketService ticketService, ILogger<Program> logger) =>
         {
@@ -99,16 +104,17 @@ public static class TicketEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, $"Error updating ticket with ID {id}");
-                throw; // O middleware de tratamento de exceções capturará isso
+                throw;
             }
         })
-        .WithName("UpdateTicket")
-        .WithOpenApi(x => new OpenApiOperation(x)
-        {
-            Summary = "Atualizar um ticket",
-            Description = "Atualiza informações de um ticket específico.",
-            Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
-        });
+         .WithName("UpdateTicket")
+         .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
+         .WithOpenApi(x => new OpenApiOperation(x)
+         {
+             Summary = "Atualizar um ticket",
+             Description = "Atualiza informações de um ticket específico.",
+             Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
+         });
 
         app.MapDelete("/ticket/{id}", async (string id, ITicketService ticketService, ILogger<Program> logger) =>
         {
@@ -121,17 +127,49 @@ public static class TicketEndpoints
             catch (Exception ex)
             {
                 logger.LogError(ex, $"Error cancelling ticket with ID {id}");
-                throw; // O middleware de tratamento de exceções capturará isso
+                throw;
             }
         })
         .WithName("DeleteTicket")
+        .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Deletar um ticket",
             Description = "Remove um ticket existente.",
             Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
         });
+    
 
-        // Adicione mais endpoints conforme necessário
+    // New endpoint for quick purchase without authentication
+    app.MapPost("/rifa/{rifaId}/compra-rapida", async (
+            string rifaId,
+            CompraRapidaDTO compra,
+            ICompraRapidaService compraRapidaService,
+            ILogger<Program> logger) =>
+        {
+            try
+            {
+                // Use the dedicated service to handle the purchase
+                var response = await compraRapidaService.ProcessarCompraRapidaAsync(rifaId, compra);
+                logger.LogInformation($"Compra rápida processada com sucesso para rifa ID {rifaId}");
+
+                return Results.Ok(response);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                logger.LogWarning(ex, $"Rifa não encontrada: {rifaId}");
+                return Results.NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                logger.LogWarning(ex, $"Operação inválida para rifa ID {rifaId}: {ex.Message}");
+                return Results.BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Erro durante compra rápida para rifa ID {rifaId}");
+                return Results.Problem($"Erro ao processar compra: {ex.Message}");
+            }
+        });
     }
 }
