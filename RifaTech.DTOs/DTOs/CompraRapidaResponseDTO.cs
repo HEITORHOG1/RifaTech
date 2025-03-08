@@ -1,6 +1,4 @@
-﻿using RifaTech.DTOs.DTOs;
-
-namespace RifaTech.DTOs
+﻿namespace RifaTech.DTOs.DTOs
 {
     public class CompraRapidaResponseDTO
     {
