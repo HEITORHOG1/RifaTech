@@ -52,7 +52,6 @@ namespace RifaTech.API.Context
                 .HasOne(d => d.Rifa)
                 .WithMany()
                 .HasForeignKey(d => d.RifaId);
-            builder.Entity<Rifa>().Ignore(r => r.ExtraNumbers);
         }
     }
 }

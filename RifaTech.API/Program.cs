@@ -123,7 +123,10 @@ builder.Services.AddControllers()
 
 // Initialize roles
 await builder.Services.InitializeRoles(builder.Services.BuildServiceProvider());
-
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseMySql(connectionString,
+        ServerVersion.AutoDetect(connectionString),
+        x => x.MigrationsAssembly("RifaTech.API")));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
