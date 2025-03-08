@@ -58,7 +58,6 @@ builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 builder.Services.AddScoped<ClienteRecorrenteService>();
-builder.Services.AddMauiBlazorWebView();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
