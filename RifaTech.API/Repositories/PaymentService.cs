@@ -1,9 +1,9 @@
 ﻿using AutoMapper;
 using MercadoPago.Client.Payment;
-using MercadoPago.Config;
 using Microsoft.EntityFrameworkCore;
 using RifaTech.API.Context;
 using RifaTech.API.Entities;
+using RifaTech.API.Services;
 using RifaTech.DTOs.Contracts;
 using RifaTech.DTOs.DTOs;
 
@@ -15,17 +15,20 @@ namespace RifaTech.API.Repositories
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
         private readonly ILogger<PaymentService> _logger;
+        private readonly IMercadoPagoService _mercadoPagoService;
 
         public PaymentService(
             AppDbContext context,
             IMapper mapper,
             IConfiguration configuration,
-            ILogger<PaymentService> logger)
+            ILogger<PaymentService> logger,
+            IMercadoPagoService mercadoPagoService)
         {
             _context = context;
             _mapper = mapper;
             _configuration = configuration;
             _logger = logger;
+            _mercadoPagoService = mercadoPagoService;
         }
 
         public async Task<PaymentDTO> ProcessPaymentAsync(PaymentDTO paymentDto)
@@ -34,7 +37,6 @@ namespace RifaTech.API.Repositories
 
             // Aqui você pode adicionar lógica adicional para processar o pagamento
             // Por exemplo, verificar se o pagamento foi confirmado
-
 
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
@@ -65,26 +67,70 @@ namespace RifaTech.API.Repositories
 
         public async Task<PaymentDTO> CheckPaymentStatusAsync(Guid paymentId)
         {
-            // Implemente a lógica para verificar o status do pagamento
-            // Pode ser necessário consultar uma API externa ou verificar o banco de dados
+            // Buscar o pagamento no banco de dados
+            var payment = await _context.Payments
+                .Include(p => p.Ticket)
+                .FirstOrDefaultAsync(p => p.Id == paymentId);
 
-            var payment = await _context.Payments.FindAsync(paymentId);
             if (payment == null)
             {
-                throw new Exception("Pagamento não encontrado.");
+                throw new KeyNotFoundException($"Pagamento com ID {paymentId} não encontrado");
             }
 
-            // Verifique o status do pagamento e atualize conforme necessário
-
-            return new PaymentDTO
+            // Se o pagamento já foi confirmado, retorne imediatamente
+            if (payment.Status == PaymentStatus.Confirmed)
             {
-                // Preencha com as informações atualizadas do pagamento
-                Id = paymentId,
-                Amount = payment.Amount,
-                Method = payment.Method,
-                IsConfirmed = payment.IsConfirmed,
-                // Outros campos, se necessário
-            };
+                return _mapper.Map<PaymentDTO>(payment);
+            }
+
+            // Se o pagamento já expirou, retorne imediatamente
+            if (payment.ExpirationTime < DateTime.UtcNow && payment.Status == PaymentStatus.Pending)
+            {
+                payment.Status = PaymentStatus.Expired;
+                await _context.SaveChangesAsync();
+                _logger.LogInformation($"Pagamento {payment.Id} foi marcado como expirado");
+                return _mapper.Map<PaymentDTO>(payment);
+            }
+
+            // Se tivermos um ID de pagamento externo (Mercado Pago), verificar o status
+            if (payment.PaymentId.HasValue)
+            {
+                try
+                {
+                    // Obter status do pagamento no Mercado Pago
+                    var mpPayment = await _mercadoPagoService.GetPaymentStatusAsync(payment.PaymentId.Value);
+
+                    _logger.LogInformation($"Status do pagamento {payment.Id} no Mercado Pago: {mpPayment.Status}");
+
+                    // Mapear status do Mercado Pago para o status interno
+                    var newStatus = MercadoPagoService.MapPaymentStatus(mpPayment.Status);
+
+                    // Se houve mudança de status, atualizar no banco de dados
+                    if (payment.Status != newStatus)
+                    {
+                        payment.Status = newStatus;
+
+                        // Se for confirmado, atualizar a flag IsConfirmed
+                        if (newStatus == PaymentStatus.Confirmed)
+                        {
+                            payment.IsConfirmed = true;
+
+                            // Atualizar tickets associados
+                            await UpdateTicketsForPaymentAsync(payment);
+                        }
+
+                        await _context.SaveChangesAsync();
+                        _logger.LogInformation($"Pagamento {payment.Id} atualizado para status {newStatus}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Erro ao verificar status do pagamento {payment.Id} no Mercado Pago");
+                    // Não propagar a exceção, apenas continuar
+                }
+            }
+
+            return _mapper.Map<PaymentDTO>(payment);
         }
 
         public async Task<PaymentDTO> IniciarPagamentoPix(Guid rifaId, int quantidade, decimal valorTotal, Guid clienteId)
@@ -104,16 +150,6 @@ namespace RifaTech.API.Repositories
                     throw new ArgumentException($"Cliente com ID {clienteId} não encontrado", nameof(clienteId));
                 }
 
-                // Configurar o token de acesso do Mercado Pago
-                string accessToken = _configuration["MercadoPago:AccessToken"];
-
-                if (string.IsNullOrEmpty(accessToken))
-                {
-                    throw new InvalidOperationException("Token de acesso do Mercado Pago não configurado");
-                }
-
-                MercadoPagoConfig.AccessToken = accessToken;
-
                 if (quantidade <= 0)
                 {
                     throw new ArgumentException("Quantidade deve ser maior que zero", nameof(quantidade));
@@ -123,9 +159,6 @@ namespace RifaTech.API.Repositories
                 {
                     throw new ArgumentException("Valor total deve ser maior que zero", nameof(valorTotal));
                 }
-
-                // Criar a requisição de pagamento
-                var paymentClient = new PaymentClient();
 
                 // Preparar telefone do cliente
                 string phoneNumber = cliente.PhoneNumber?.Replace("+", "").Replace("-", "").Replace(" ", "").Trim() ?? "";
@@ -145,6 +178,7 @@ namespace RifaTech.API.Repositories
                 // Configurar expiração (30 minutos)
                 DateTime expiracao = DateTime.UtcNow.AddMinutes(30);
 
+                // Criar a requisição de pagamento
                 var paymentRequest = new PaymentCreateRequest
                 {
                     TransactionAmount = (decimal)valorTotal,
@@ -156,7 +190,6 @@ namespace RifaTech.API.Repositories
                         Email = cliente.Email,
                         FirstName = cliente.Name?.Split(' ').FirstOrDefault() ?? "Cliente",
                         LastName = cliente.Name?.Split(' ').Skip(1).FirstOrDefault() ?? "",
-                        // Remova a propriedade Identification temporariamente
                         Phone = new PaymentPayerPhoneRequest
                         {
                             AreaCode = areaCode,
@@ -165,13 +198,12 @@ namespace RifaTech.API.Repositories
                     }
                 };
 
-                // Enviar a requisição e obter a resposta
-                MercadoPago.Resource.Payment.Payment paymentResponse;
-
+                // Criar pagamento usando o serviço MercadoPago
+                MercadoPago.Resource.Payment.Payment mercadoPagoPayment;
                 try
                 {
-                    paymentResponse = await paymentClient.CreateAsync(paymentRequest);
-                    _logger.LogInformation($"Pagamento PIX criado: ID {paymentResponse.Id}");
+                    mercadoPagoPayment = await _mercadoPagoService.CreatePaymentAsync(paymentRequest);
+                    _logger.LogInformation($"Pagamento PIX criado: ID {mercadoPagoPayment.Id}");
                 }
                 catch (Exception ex)
                 {
@@ -186,11 +218,11 @@ namespace RifaTech.API.Repositories
                     Method = "PIX",
                     Amount = (float)valorTotal,
                     IsConfirmed = false,
-                    QrCodeBase64 = paymentResponse.PointOfInteraction?.TransactionData?.QrCodeBase64 ?? "",
-                    QrCode = paymentResponse.PointOfInteraction?.TransactionData?.QrCode ?? "",
+                    QrCodeBase64 = mercadoPagoPayment.PointOfInteraction?.TransactionData?.QrCodeBase64 ?? "",
+                    QrCode = mercadoPagoPayment.PointOfInteraction?.TransactionData?.QrCode ?? "",
                     Status = PaymentStatus.Pending,
                     ExpirationTime = expiracao,
-                    PaymentId = paymentResponse.Id
+                    PaymentId = mercadoPagoPayment.Id
                 };
 
                 // Salvar o pagamento
@@ -204,20 +236,48 @@ namespace RifaTech.API.Repositories
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erro ao iniciar pagamento PIX para rifa");
+                _logger.LogError(ex, $"Erro ao iniciar pagamento PIX para rifa {rifaId}");
                 throw;
             }
         }
 
-        // Método auxiliar para atualizar o status do ticket
-        private async Task UpdateTicketStatusAsync(Guid ticketId)
+        public async Task<IEnumerable<PaymentDTO>> GetPaymentsByExternalIdAsync(long externalId)
         {
-            var ticket = await _context.Tickets.FindAsync(ticketId);
-            if (ticket != null)
+            var payments = await _context.Payments
+                .Where(p => p.PaymentId == externalId)
+                .ToListAsync();
+
+            return _mapper.Map<IEnumerable<PaymentDTO>>(payments);
+        }
+
+        private async Task UpdateTicketsForPaymentAsync(Payment payment)
+        {
+            try
             {
-                ticket.EhValido = true;
+                // Se o pagamento tem um ticket associado, atualizar seu status
+                if (payment.Ticket != null)
+                {
+                    payment.Ticket.EhValido = true;
+                    _logger.LogInformation($"Ticket {payment.Ticket.Id} atualizado para válido após confirmação de pagamento");
+                }
+
+                // Também buscar todos os tickets que tenham este PaymentId
+                var tickets = await _context.Tickets
+                    .Where(t => t.PaymentId == payment.Id)
+                    .ToListAsync();
+
+                foreach (var ticket in tickets)
+                {
+                    ticket.EhValido = true;
+                    _logger.LogInformation($"Ticket {ticket.Id} atualizado para válido após confirmação de pagamento");
+                }
+
                 await _context.SaveChangesAsync();
-                _logger.LogInformation($"Ticket {ticketId} atualizado para válido após confirmação de pagamento");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao atualizar tickets para pagamento {payment.Id}");
+                // Continue, não interrompa o processamento se falhar a atualização dos tickets
             }
         }
     }

@@ -5,7 +5,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using RifaTech.API.Context;
 using RifaTech.API.Endpoints;
-using RifaTech.API.Exceptions;
 using RifaTech.API.Extensions;
 using RifaTech.API.Middleware;
 using RifaTech.API.Services;
@@ -179,5 +178,6 @@ app.RegisterExtraNumberEndpoints();
 app.RegisterUnpaidRifaEndpoints();
 app.RegisterRifaMetricsEndpoints();
 app.RegisterCompraRapidaEndpoints();
+app.RegisterWebhookEndpoints();
 
 app.Run();

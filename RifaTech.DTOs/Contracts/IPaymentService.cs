@@ -15,5 +15,8 @@ namespace RifaTech.DTOs.Contracts
         Task<PaymentDTO> CheckPaymentStatusAsync(Guid paymentId);
 
         Task<PaymentDTO> IniciarPagamentoPix(Guid rifaId, int quantidade, decimal valorTotal, Guid clienteId);
+
+        // Método para buscar pagamentos por ID externo (Mercado Pago)
+        Task<IEnumerable<PaymentDTO>> GetPaymentsByExternalIdAsync(long externalId);
     }
 }

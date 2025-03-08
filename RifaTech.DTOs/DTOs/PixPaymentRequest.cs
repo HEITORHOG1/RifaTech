@@ -1,7 +1,6 @@
-﻿using RifaTech.DTOs.DTOs;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace RifaTech.API.Exceptions
+namespace RifaTech.DTOs.DTOs
 {
     public class PixPaymentRequest
     {

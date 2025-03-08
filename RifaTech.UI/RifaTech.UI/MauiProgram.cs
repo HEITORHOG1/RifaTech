@@ -3,8 +3,6 @@
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Controls.Hosting;
-using Microsoft.Maui.Hosting;
 using MudBlazor;
 using MudBlazor.Services;
 using RifaTech.UI.Shared.Services;

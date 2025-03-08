@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
+﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using Blazored.LocalStorage;
 
 namespace RifaTech.UI.Shared.Extensions
 {

@@ -2,7 +2,7 @@
 using RifaTech.API.Services;
 using RifaTech.DTOs.Contracts;
 
-namespace RifaTech.API.Exceptions
+namespace RifaTech.API.Extensions
 {
     public static class ServiceExtensions
     {
@@ -11,7 +11,7 @@ namespace RifaTech.API.Exceptions
             // Repository services
             services.AddTransient<IRifaService, RifaService>();
             services.AddTransient<ITicketService, TicketService>();
-            services.AddTransient<IPaymentService, PaymentService>();
+            services.AddTransient<IPaymentService, Repositories.PaymentService>();
             services.AddTransient<IExtraNumberService, ExtraNumberService>();
             services.AddTransient<IDrawService, DrawService>();
             services.AddTransient<IUserAccount, AccountService>();
@@ -24,6 +24,10 @@ namespace RifaTech.API.Exceptions
             services.AddSingleton<ICacheService, MemoryCacheService>();
 
             services.AddScoped<INotificationService, EmailNotificationService>();
+            // Add MercadoPago service
+            services.AddScoped<IMercadoPagoService, MercadoPagoService>();
+
+            services.AddScoped<IWebhookService, WebhookService>();
         }
     }
 }

@@ -1,10 +1,5 @@
 ﻿using RifaTech.DTOs.DTOs;
 using RifaTech.UI.Shared.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RifaTech.UI.Shared.Extensions
 {

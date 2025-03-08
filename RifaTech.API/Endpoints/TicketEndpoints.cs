@@ -138,38 +138,38 @@ public static class TicketEndpoints
             Description = "Remove um ticket existente.",
             Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
         });
-    
 
-    // New endpoint for quick purchase without authentication
-    app.MapPost("/rifa/{rifaId}/compra-rapida", async (
-            string rifaId,
-            CompraRapidaDTO compra,
-            ICompraRapidaService compraRapidaService,
-            ILogger<Program> logger) =>
-        {
-            try
-            {
-                // Use the dedicated service to handle the purchase
-                var response = await compraRapidaService.ProcessarCompraRapidaAsync(rifaId, compra);
-                logger.LogInformation($"Compra rápida processada com sucesso para rifa ID {rifaId}");
 
-                return Results.Ok(response);
-            }
-            catch (KeyNotFoundException ex)
+        // New endpoint for quick purchase without authentication
+        app.MapPost("/rifa/{rifaId}/compra-rapida", async (
+                string rifaId,
+                CompraRapidaDTO compra,
+                ICompraRapidaService compraRapidaService,
+                ILogger<Program> logger) =>
             {
-                logger.LogWarning(ex, $"Rifa não encontrada: {rifaId}");
-                return Results.NotFound(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, $"Operação inválida para rifa ID {rifaId}: {ex.Message}");
-                return Results.BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, $"Erro durante compra rápida para rifa ID {rifaId}");
-                return Results.Problem($"Erro ao processar compra: {ex.Message}");
-            }
-        });
+                try
+                {
+                    // Use the dedicated service to handle the purchase
+                    var response = await compraRapidaService.ProcessarCompraRapidaAsync(rifaId, compra);
+                    logger.LogInformation($"Compra rápida processada com sucesso para rifa ID {rifaId}");
+
+                    return Results.Ok(response);
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    logger.LogWarning(ex, $"Rifa não encontrada: {rifaId}");
+                    return Results.NotFound(new { message = ex.Message });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    logger.LogWarning(ex, $"Operação inválida para rifa ID {rifaId}: {ex.Message}");
+                    return Results.BadRequest(new { message = ex.Message });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, $"Erro durante compra rápida para rifa ID {rifaId}");
+                    return Results.Problem($"Erro ao processar compra: {ex.Message}");
+                }
+            });
     }
 }

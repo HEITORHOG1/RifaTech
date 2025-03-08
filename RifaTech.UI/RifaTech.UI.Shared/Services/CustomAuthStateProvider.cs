@@ -1,12 +1,11 @@
 ﻿// RifaTech.UI.Shared/Services/CustomAuthStateProvider.cs
 
 using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
-using System.Text.Json;
-using System.IdentityModel.Tokens.Jwt;
 using RifaTech.UI.Shared.Models;
 using RifaTech.UI.Shared.Services;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
+using System.Security.Claims;
 
 public class CustomAuthStateProvider : AuthenticationStateProvider
 {

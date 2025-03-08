@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RifaTech.UI.Shared.Services
+﻿namespace RifaTech.UI.Shared.Services
 {
     // RifaTech.UI.Shared/Services/ILocalStorageService.cs
 

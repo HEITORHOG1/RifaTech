@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
-using RifaTech.API.Exceptions;
 using RifaTech.DTOs.Contracts;
 using RifaTech.DTOs.DTOs;
 
