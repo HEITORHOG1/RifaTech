@@ -179,5 +179,7 @@ app.RegisterUnpaidRifaEndpoints();
 app.RegisterRifaMetricsEndpoints();
 app.RegisterCompraRapidaEndpoints();
 app.RegisterWebhookEndpoints();
-
+app.RegisterAdminDashboardEndpoints();
+app.RegisterDrawManagementEndpoints();
+app.RegisterTicketSearchEndpoints();
 app.Run();

@@ -30,6 +30,11 @@ namespace RifaTech.API.Extensions
             services.AddScoped<IWhatsAppService, WhatsAppService>();
             services.AddScoped<INotificationService, MultiChannelNotificationService>();
 
+            // Add admin services
+            services.AddScoped<IAdminStatsService, AdminStatsService>();
+            services.AddScoped<IDrawManagementService, DrawManagementService>();
+            services.AddScoped<ITicketSearchService, TicketSearchService>();
+
             // Add background services
             services.AddHostedService<PaymentStatusVerificationService>();
             services.AddHostedService<NotificationBackgroundService>();
