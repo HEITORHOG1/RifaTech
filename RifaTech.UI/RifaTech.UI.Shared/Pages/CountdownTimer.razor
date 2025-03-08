@@ -119,5 +119,41 @@
 
         CalculateTimeRemaining();
     }
+    private void OnTimerElapsed(object sender, ElapsedEventArgs e)
+    {
+        CalculateTimeRemaining();
+        InvokeAsync(StateHasChanged);
+    }
 
- }
+    private void CalculateTimeRemaining()
+    {
+        var timeSpan = TargetDate - DateTime.UtcNow;
+
+        if (timeSpan.TotalSeconds <= 0)
+        {
+            // Timer finished
+            IsFinished = true;
+            _timer.Enabled = false;
+
+            // Invoke the callback if provided
+            if (OnFinished.HasDelegate)
+            {
+                InvokeAsync(() => OnFinished.InvokeAsync());
+            }
+
+            return;
+        }
+
+        // Calculate the remaining time
+        Days = (int)timeSpan.TotalDays;
+        Hours = timeSpan.Hours;
+        Minutes = timeSpan.Minutes;
+        Seconds = timeSpan.Seconds;
+    }
+
+    public void Dispose()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+    }
+}
