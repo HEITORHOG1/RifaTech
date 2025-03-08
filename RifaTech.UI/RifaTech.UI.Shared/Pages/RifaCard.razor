@@ -2,14 +2,36 @@
 @using RifaTech.DTOs.DTOs
 
 <MudCard Elevation="2" Class="rifa-card h-100">
-    <MudCardMedia Image="@GetImageUrl()" Height="200" />
+    <div class="position-relative">
+        <MudCardMedia Image="@GetImageUrl()" Height="180" />
+        
+        <!-- Badges de status e tempo restante -->
+        @if (IsDrawSoon)
+        {
+            <MudChip Color="Color.Error" 
+                    Size="Size.Small" 
+                    Label="true"
+                    Class="position-absolute" 
+                    Style="top: 8px; right: 8px;">
+                @GetShortTimeRemaining()
+            </MudChip>
+        }
+        
+        @if (GetProgressPercentage() > 80)
+        {
+            <MudChip Color="Color.Warning" 
+                    Size="Size.Small" 
+                    Label="true"
+                    Class="position-absolute" 
+                    Style="top: 8px; left: 8px;">
+                Quase Esgotado
+            </MudChip>
+        }
+    </div>
     
     <MudCardHeader>
         <CardHeaderContent>
-            <MudText Typo="Typo.h6">@Rifa.Name</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Surface" Style="margin-top: 4px;">
-                @Rifa.Description
-            </MudText>
+            <MudText Typo="Typo.h6" Class="text-truncate">@Rifa.Name</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
             <MudChip Color="Color.Primary" Size="Size.Small" T="string">
@@ -19,28 +41,30 @@
     </MudCardHeader>
     
     <MudCardContent Class="pt-0">
-        <MudDivider Class="mb-3" />
+        <MudText Typo="Typo.body2" Class="mb-3 text-truncate d-block">
+            @(Rifa.Description?.Length > 80 ? Rifa.Description.Substring(0, 80) + "..." : Rifa.Description)
+        </MudText>
         
         <div class="d-flex align-center mb-2">
-            <MudIcon Icon="@Icons.Material.Outlined.CalendarToday" Size="Size.Small" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Outlined.EventAvailable" Size="Size.Small" Class="mr-2" />
             <MudText Typo="Typo.body2">
                 Sorteio: @FormatDate(Rifa.DrawDateTime)
             </MudText>
         </div>
         
         <div class="d-flex align-center mb-3">
-            <MudIcon Icon="@Icons.Material.Outlined.PriceChange" Size="Size.Small" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Outlined.EmojiEvents" Size="Size.Small" Class="mr-2" />
             <MudText Typo="Typo.body2">
-                Prêmio: @FormatCurrency((float)Rifa.TicketPrice)
+                Prêmio: @FormatCurrency((decimal)Rifa.TicketPrice)
             </MudText>
         </div>
         
         <MudText Typo="Typo.caption" Class="mt-1 mb-1">
-            Tickets disponíveis: @GetAvailableTickets() de @Rifa.MaxTickets
+            @GetAvailableTickets() de @Rifa.MaxTickets tickets disponíveis
         </MudText>
         
         <MudProgressLinear Color="@GetProgressColor()" 
-                         Value="@GetPercentageSold()" 
+                         Value="@GetProgressPercentage()" 
                          Class="my-1" />
     </MudCardContent>
     
@@ -54,7 +78,7 @@
         <MudButton Variant="Variant.Filled" 
                  Color="Color.Secondary" 
                  Href="@($"/rifas/{Rifa.Id}/comprar")">
-            Comprar
+            Participar
         </MudButton>
     </MudCardActions>
 </MudCard>
@@ -68,12 +92,13 @@
         transform: translateY(-5px);
         box-shadow: var(--mud-elevation-4);
     }
-    
 </style>
 
 @code {
     [Parameter]
     public RifaDTO Rifa { get; set; }
+    
+    private bool IsDrawSoon => (Rifa.DrawDateTime - DateTime.UtcNow).TotalDays <= 3;
     
     private string GetImageUrl()
     {
@@ -82,14 +107,14 @@
             : $"data:image/png;base64,{Rifa.Base64Img}";
     }
     
-    private string FormatCurrency(float value)
+    private string FormatCurrency(decimal value)
     {
-        return ((decimal)value).ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+        return value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
     }
     
     private string FormatDate(DateTime date)
     {
-        return date.ToString("dd/MM/yyyy");
+        return date.ToString("dd/MM/yy HH:mm");
     }
     
     private string GetAvailableTickets()
@@ -99,7 +124,7 @@
         return available.ToString();
     }
     
-    private double GetPercentageSold()
+    private double GetProgressPercentage()
     {
         if (Rifa.MaxTickets <= 0) return 0;
         
@@ -111,10 +136,26 @@
     
     private Color GetProgressColor()
     {
-        double percentage = GetPercentageSold();
+        double percentage = GetProgressPercentage();
         
         if (percentage < 40) return Color.Success;
         if (percentage < 70) return Color.Warning;
         return Color.Error;
+    }
+    
+    private string GetShortTimeRemaining()
+    {
+        var timeSpan = Rifa.DrawDateTime - DateTime.UtcNow;
+        
+        if (timeSpan.TotalDays < 0)
+            return "Encerrado";
+            
+        if (timeSpan.TotalDays >= 1)
+            return $"{Math.Floor(timeSpan.TotalDays)}d";
+            
+        if (timeSpan.TotalHours >= 1)
+            return $"{Math.Floor(timeSpan.TotalHours)}h";
+            
+        return $"{timeSpan.Minutes}min";
     }
 }

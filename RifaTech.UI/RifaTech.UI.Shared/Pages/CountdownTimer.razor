@@ -1,0 +1,123 @@
+﻿@* CountdownTimer.razor *@
+@using System.Timers
+@implements IDisposable
+
+<div class="@($"countdown-timer {Class}")">
+    @if (IsFinished)
+    {
+        <MudText Typo="Typo" Color="Color.Error" Class="@TextClass">@FinishedText</MudText>
+    }
+    else
+    {
+        @if (ShowDays)
+        {
+            <div class="countdown-unit">
+                <div class="countdown-value @ValueClass">@Days</div>
+                <div class="countdown-label @LabelClass">dias</div>
+            </div>
+        }
+
+        @if (ShowHours)
+        {
+            <div class="countdown-unit">
+                <div class="countdown-value @ValueClass">@Hours.ToString("00")</div>
+                <div class="countdown-label @LabelClass">horas</div>
+            </div>
+        }
+
+        @if (ShowMinutes)
+        {
+            <div class="countdown-unit">
+                <div class="countdown-value @ValueClass">@Minutes.ToString("00")</div>
+                <div class="countdown-label @LabelClass">min</div>
+            </div>
+        }
+
+        @if (ShowSeconds)
+        {
+            <div class="countdown-unit">
+                <div class="countdown-value @ValueClass">@Seconds.ToString("00")</div>
+                <div class="countdown-label @LabelClass">seg</div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .countdown-timer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .countdown-unit {
+        text-align: center;
+        min-width: 50px;
+    }
+
+    .countdown-value {
+        font-weight: bold;
+    }
+
+    .countdown-label {
+        font-size: 0.8em;
+        opacity: 0.8;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public DateTime TargetDate { get; set; }
+
+    [Parameter]
+    public string Class { get; set; } = "";
+
+    [Parameter]
+    public string ValueClass { get; set; } = "";
+
+    [Parameter]
+    public string LabelClass { get; set; } = "";
+
+    [Parameter]
+    public string TextClass { get; set; } = "";
+
+    [Parameter]
+    public bool ShowDays { get; set; } = true;
+
+    [Parameter]
+    public bool ShowHours { get; set; } = true;
+
+    [Parameter]
+    public bool ShowMinutes { get; set; } = true;
+
+    [Parameter]
+    public bool ShowSeconds { get; set; } = true;
+
+    [Parameter]
+    public MudBlazor.Typo Typo { get; set; } = MudBlazor.Typo.body1;
+
+    [Parameter]
+    public string FinishedText { get; set; } = "Encerrado";
+
+    [Parameter]
+    public EventCallback OnFinished { get; set; }
+
+    private Timer _timer;
+    private int Days { get; set; }
+    private int Hours { get; set; }
+    private int Minutes { get; set; }
+    private int Seconds { get; set; }
+    private bool IsFinished { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _timer = new Timer(1000);
+        _timer.Elapsed += OnTimerElapsed;
+        _timer.AutoReset = true;
+        _timer.Enabled = true;
+
+        CalculateTimeRemaining();
+    }
+
+ }

@@ -4,142 +4,276 @@
 @using RifaTech.DTOs.DTOs
 @inject HttpClient Http
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 <PageTitle>RifaTech - Rifas Online</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-4">Bem-vindo ao RifaTech</MudText>
-    
-    <MudCarousel Class="mud-width-full mb-8" 
-                Style="height:400px;" 
-                ShowArrows="true" 
-                ShowDelimiters="true" 
-                AutoCycle="true"
-                 TData="object">
-        <MudCarouselItem>
-            <div class="d-flex flex-column justify-center align-center" style="height:100%">
-                <MudPaper Elevation="3" Class="pa-4 mx-4" Style="width:80%; max-width:800px; background-color: rgba(255,255,255,0.9);">
-                    <MudText Typo="Typo.h5" Align="Align.Center">Crie sua própria rifa online!</MudText>
-                    <MudText Align="Align.Center" Class="my-4">
-                        Organize sorteios facilmente e gerencie todas as vendas em um só lugar.
-                    </MudText>
-                    <div class="d-flex justify-center">
-                        <MudButton Variant="Variant.Filled" 
-                                 Color="Color.Primary" 
-                                 Href="/rifas/criar" 
-                                 Size="Size.Large">
-                            Criar Rifa
-                        </MudButton>
-                    </div>
-                </MudPaper>
-            </div>
-        </MudCarouselItem>
-        <MudCarouselItem>
-            <div class="d-flex flex-column justify-center align-center" style="height:100%">
-                <MudPaper Elevation="3" Class="pa-4 mx-4" Style="width:80%; max-width:800px; background-color: rgba(255,255,255,0.9);">
-                    <MudText Typo="Typo.h5" Align="Align.Center">Pagamentos via PIX</MudText>
-                    <MudText Align="Align.Center" Class="my-4">
-                        Compre seus tickets com rapidez e segurança usando PIX!
-                    </MudText>
-                    <div class="d-flex justify-center">
-                        <MudButton Variant="Variant.Filled" 
-                                 Color="Color.Primary" 
-                                 Href="/rifas" 
-                                 Size="Size.Large">
-                            Ver Rifas
-                        </MudButton>
-                    </div>
-                </MudPaper>
-            </div>
-        </MudCarouselItem>
-    </MudCarousel>
-    
-    <MudText Typo="Typo.h5" Class="mb-4">Rifas em Destaque</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-16">
+    <!-- Banner rotativo com rifas em destaque -->
+    @if (_loading)
+    {
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="400px" Animation="Animation.Wave" />
+    }
+    else if (_featuredRifas?.Any() == true)
+    {
+        <MudPaper Elevation="0" Class="mb-8">
+            <MudCarousel Class="mud-width-full" Style="height:400px;" 
+                        ShowArrows="true" 
+                        ShowDelimiters="true" 
+                        AutoCycle="true" 
+                        TData="RifaDTO">
+                @foreach (var rifa in _featuredRifas.Take(5))
+                {
+                    <MudCarouselItem Transition="Transition.Slide" Color="@Color.Primary">
+                        <div class="d-flex flex-grow-1 position-relative">
+                            <!-- Imagem de fundo com sobreposição escura -->
+                            <div class="position-absolute" style="top:0; left:0; right:0; bottom:0; background-position: center; background-size: cover; 
+                                 background-image: url('@GetRifaImage(rifa)'); filter: brightness(0.7);">
+                            </div>
+                            
+                            <!-- Conteúdo do banner -->
+                            <div class="d-flex flex-column justify-center align-center position-relative" style="z-index:1; width:100%;">
+                                <MudContainer MaxWidth="MaxWidth.Medium">
+                                    <MudText Typo="Typo.h3" Align="Align.Center" Color="Color.White" Class="mb-4">
+                                        @rifa.Name
+                                    </MudText>
+                                    
+                                    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.White" Class="mb-4">
+                                        @(rifa.Description?.Length > 150 ? rifa.Description.Substring(0, 150) + "..." : rifa.Description)
+                                    </MudText>
+                                    
+                                    <div class="d-flex justify-center mt-4">
+                                        <!-- Contador regressivo -->
+                                        <MudCard Elevation="3" Class="pa-3 mx-2" Style="background-color: rgba(0,0,0,0.7);">
+                                            <MudText Typo="Typo.subtitle1" Color="Color.White" Align="Align.Center">Sorteio em</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Success" Align="Align.Center">@GetTimeRemaining(rifa.DrawDateTime)</MudText>
+                                        </MudCard>
+                                        
+                                        <!-- Preço do ticket -->
+                                        <MudCard Elevation="3" Class="pa-3 mx-2" Style="background-color: rgba(0,0,0,0.7);">
+                                            <MudText Typo="Typo.subtitle1" Color="Color.White" Align="Align.Center">Valor do Ticket</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Info" Align="Align.Center">@FormatCurrency(rifa.TicketPrice)</MudText>
+                                        </MudCard>
+                                        
+                                        <!-- Progresso -->
+                                        <MudCard Elevation="3" Class="pa-3 mx-2" Style="background-color: rgba(0,0,0,0.7);">
+                                            <MudText Typo="Typo.subtitle1" Color="Color.White" Align="Align.Center">Tickets Vendidos</MudText>
+                                            <MudText Typo="Typo.h5" Color="Color.Warning" Align="Align.Center">
+                                                @(GetProgressPercentage(rifa))%
+                                            </MudText>
+                                        </MudCard>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-center mt-6">
+                                        <MudButton Variant="Variant.Filled" 
+                                                Color="Color.Primary" 
+                                                Size="Size.Large"
+                                                OnClick="@(() => NavigateToRifa(rifa.Id))"
+                                                Class="px-8">
+                                            Participar Agora
+                                        </MudButton>
+                                    </div>
+                                </MudContainer>
+                            </div>
+                        </div>
+                    </MudCarouselItem>
+                }
+            </MudCarousel>
+        </MudPaper>
+    }
+
+    <!-- Próximos sorteios -->
+    <MudText Typo="Typo.h4" Class="mb-4">Próximos Sorteios</MudText>
     
     @if (_loading)
     {
-        <div class="d-flex justify-center my-8">
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
-        </div>
+        <MudGrid>
+            @for (int i = 0; i < 3; i++)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="2">
+                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" Animation="Animation.Wave" />
+                        <MudCardContent>
+                            <MudSkeleton Width="90%" Height="20px" Animation="Animation.Wave" />
+                            <MudSkeleton Width="70%" Height="20px" Animation="Animation.Wave" />
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
     }
-    else if (_rifas == null || !_rifas.Any())
+    else if (_upcomingRifas?.Any() == true)
     {
-        <MudAlert Severity="Severity.Info" Class="my-4">Nenhuma rifa disponível no momento.</MudAlert>
+        <MudGrid>
+            @foreach (var rifa in _upcomingRifas)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="3" Outlined="true" Class="h-100 rifa-card">
+                        <div class="position-relative">
+                            <MudCardMedia Image="@GetRifaImage(rifa)" Height="200" />
+                            
+                            <!-- Badge com contagem regressiva -->
+                            <MudChip Color="Color.Error" 
+                                    Size="Size.Large" 
+                                    Label="true"
+                                    Class="position-absolute" 
+                                    Style="top: 10px; right: 10px;">
+                                @GetShortTimeRemaining(rifa.DrawDateTime)
+                            </MudChip>
+                        </div>
+                        
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6" Class="mb-2">@rifa.Name</MudText>
+                            <MudText Typo="Typo.body2" Class="mb-3 text-truncate d-block">
+                                @(rifa.Description?.Length > 100 ? rifa.Description.Substring(0, 100) + "..." : rifa.Description)
+                            </MudText>
+                            
+                            <div class="d-flex justify-space-between align-center">
+                                <MudText Typo="Typo.h6" Color="Color.Primary">@FormatCurrency(rifa.TicketPrice)</MudText>
+                                <MudChip Color="Color.Info" Size="Size.Small" Label="true">
+                                    Prêmio: @FormatCurrency(rifa.PriceValue)
+                                </MudChip>
+                            </div>
+                            
+                            <!-- Barra de progresso -->
+                            <div class="my-3">
+                                <MudText Typo="Typo.caption" Class="mb-1">
+                                    @(rifa.Tickets?.Count ?? 0) de @rifa.MaxTickets tickets vendidos
+                                </MudText>
+                                <MudProgressLinear Color="@GetProgressColor(rifa)" 
+                                                Value="@GetProgressPercentage(rifa)" 
+                                                Class="my-1" 
+                                                Striped="true" />
+                            </div>
+                        </MudCardContent>
+                        
+                        <MudCardActions Class="d-flex justify-space-between">
+                            <MudButton Variant="Variant.Text" 
+                                     Color="Color.Primary" 
+                                     OnClick="@(() => NavigateToRifa(rifa.Id))">
+                                Ver Detalhes
+                            </MudButton>
+                            
+                            <MudButton Variant="Variant.Filled" 
+                                     Color="Color.Secondary" 
+                                     OnClick="@(() => NavigateToComprar(rifa.Id))">
+                                Participar
+                            </MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
     }
     else
     {
+        <MudAlert Severity="Severity.Info" Class="my-4">Nenhum sorteio disponível no momento.</MudAlert>
+    }
+    
+    <!-- Rifas em destaque -->
+    <MudDivider Class="my-8" />
+    
+    <MudText Typo="Typo.h4" Class="mb-4">Rifas em Destaque</MudText>
+    
+    @if (_loading)
+    {
         <MudGrid>
-            @foreach (var rifa in _rifas.Take(6))
+            @for (int i = 0; i < 6; i++)
             {
-                <MudItem xs="12" sm="6" md="4">
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="2">
+                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" Animation="Animation.Wave" />
+                        <MudCardContent>
+                            <MudSkeleton Width="90%" Height="20px" Animation="Animation.Wave" />
+                            <MudSkeleton Width="70%" Height="20px" Animation="Animation.Wave" />
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else if (_rifas?.Any() == true)
+    {
+        <MudGrid>
+            @foreach (var rifa in _rifas.Take(8))
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
                     <RifaCard Rifa="rifa" />
                 </MudItem>
             }
         </MudGrid>
-        
-        <div class="d-flex justify-center mt-6">
-            <MudButton Variant="Variant.Outlined" 
-                     Color="Color.Primary" 
-                     Href="/rifas">
-                Ver todas as rifas
-            </MudButton>
-        </div>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Class="my-4">Nenhuma rifa disponível no momento.</MudAlert>
     }
     
+    <div class="d-flex justify-center mt-6">
+        <MudButton Variant="Variant.Outlined" 
+                 Color="Color.Primary" 
+                 Href="/rifas">
+            Ver todas as rifas
+        </MudButton>
+    </div>
+    
+    <!-- Como funciona -->
     <MudDivider Class="my-8" />
     
-    <MudText Typo="Typo.h5" Class="mb-4">Como Funciona</MudText>
+    <MudText Typo="Typo.h4" Class="mb-6">Como Funciona</MudText>
     
     <MudGrid>
         <MudItem xs="12" sm="4">
-            <MudCard Class="h-100">
+            <MudCard Class="step-card h-100" Elevation="2">
                 <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">1. Escolha uma Rifa</MudText>
-                    </CardHeaderContent>
                     <CardHeaderAvatar>
-                        <MudAvatar Color="Color.Primary">1</MudAvatar>
+                        <MudAvatar Color="Color.Primary" Size="Size.Large">1</MudAvatar>
                     </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h5">Escolha uma Rifa</MudText>
+                    </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText>
+                    <MudText Typo="Typo.body1">
                         Navegue pelas rifas disponíveis e escolha a que mais lhe interessa.
+                        Veja detalhes como valor do prêmio, data do sorteio e preço por número.
                     </MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
         
         <MudItem xs="12" sm="4">
-            <MudCard Class="h-100">
+            <MudCard Class="step-card h-100" Elevation="2">
                 <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">2. Compre Tickets</MudText>
-                    </CardHeaderContent>
                     <CardHeaderAvatar>
-                        <MudAvatar Color="Color.Primary">2</MudAvatar>
+                        <MudAvatar Color="Color.Primary" Size="Size.Large">2</MudAvatar>
                     </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h5">Compre Tickets</MudText>
+                    </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText>
+                    <MudText Typo="Typo.body1">
                         Escolha quantos tickets deseja e realize o pagamento via PIX.
+                        O pagamento é rápido, seguro e você recebe seus números imediatamente.
                     </MudText>
                 </MudCardContent>
             </MudCard>
         </MudItem>
         
         <MudItem xs="12" sm="4">
-            <MudCard Class="h-100">
+            <MudCard Class="step-card h-100" Elevation="2">
                 <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">3. Aguarde o Sorteio</MudText>
-                    </CardHeaderContent>
                     <CardHeaderAvatar>
-                        <MudAvatar Color="Color.Primary">3</MudAvatar>
+                        <MudAvatar Color="Color.Primary" Size="Size.Large">3</MudAvatar>
                     </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h5">Aguarde o Sorteio</MudText>
+                    </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText>
-                        Receba seus números e aguarde o sorteio. Você será notificado caso seja o ganhador!
+                    <MudText Typo="Typo.body1">
+                        Receba seus números e acompanhe o sorteio ao vivo. 
+                        Se for o ganhador, receberá o prêmio conforme o regulamento.
                     </MudText>
                 </MudCardContent>
             </MudCard>
@@ -147,8 +281,30 @@
     </MudGrid>
 </MudContainer>
 
+<style>
+    .rifa-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .rifa-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--mud-elevation-4);
+    }
+    
+    .step-card {
+        transition: transform 0.3s ease, background-color 0.3s ease;
+    }
+    
+    .step-card:hover {
+        transform: scale(1.02);
+        background-color: var(--mud-palette-background-grey);
+    }
+</style>
+
 @code {
     private List<RifaDTO> _rifas;
+    private List<RifaDTO> _featuredRifas;
+    private List<RifaDTO> _upcomingRifas;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -161,7 +317,23 @@
         try
         {
             _loading = true;
+            
+            // Carrega todas as rifas
             _rifas = await Http.GetFromJsonAsync<List<RifaDTO>>("api/rifas");
+            
+            // Separa as rifas em destaque (com maior porcentagem de vendas)
+            _featuredRifas = _rifas
+                .Where(r => r.DrawDateTime > DateTime.UtcNow)
+                .OrderByDescending(r => (r.Tickets?.Count ?? 0) * 100.0 / Math.Max(1, r.MaxTickets))
+                .Take(5)
+                .ToList();
+            
+            // Separa as rifas com sorteio mais próximo
+            _upcomingRifas = _rifas
+                .Where(r => r.DrawDateTime > DateTime.UtcNow)
+                .OrderBy(r => r.DrawDateTime)
+                .Take(6)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -171,5 +343,76 @@
         {
             _loading = false;
         }
+    }
+
+    private string GetRifaImage(RifaDTO rifa)
+    {
+        return string.IsNullOrEmpty(rifa.Base64Img) 
+            ? "/images/default-rifa.jpg" 
+            : $"data:image/png;base64,{rifa.Base64Img}";
+    }
+
+    private string FormatCurrency(decimal value)
+    {
+        return value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+    }
+
+    private Color GetProgressColor(RifaDTO rifa)
+    {
+        double percentage = GetProgressPercentage(rifa);
+        
+        if (percentage < 30) return Color.Success;
+        if (percentage < 70) return Color.Warning;
+        return Color.Error;
+    }
+
+    private double GetProgressPercentage(RifaDTO rifa)
+    {
+        if (rifa.MaxTickets <= 0) return 0;
+        
+        int ticketsSold = rifa.Tickets?.Count ?? 0;
+        return (double)ticketsSold * 100 / rifa.MaxTickets;
+    }
+
+    private string GetTimeRemaining(DateTime drawDateTime)
+    {
+        var timeSpan = drawDateTime - DateTime.UtcNow;
+        
+        if (timeSpan.TotalDays < 0)
+            return "Sorteio encerrado";
+            
+        if (timeSpan.TotalDays > 1)
+            return $"{Math.Floor(timeSpan.TotalDays)} dias {timeSpan.Hours}h {timeSpan.Minutes}min";
+            
+        return $"{timeSpan.Hours}h {timeSpan.Minutes}min {timeSpan.Seconds}s";
+    }
+
+    private string GetShortTimeRemaining(DateTime drawDateTime)
+    {
+        var timeSpan = drawDateTime - DateTime.UtcNow;
+        
+        if (timeSpan.TotalDays < 0)
+            return "Encerrado";
+            
+        if (timeSpan.TotalDays > 7)
+            return $"{Math.Floor(timeSpan.TotalDays)} dias";
+            
+        if (timeSpan.TotalDays > 1)
+            return $"{Math.Floor(timeSpan.TotalDays)}d {timeSpan.Hours}h";
+            
+        if (timeSpan.TotalHours > 1)
+            return $"{Math.Floor(timeSpan.TotalHours)}h {timeSpan.Minutes}m";
+            
+        return $"{timeSpan.Minutes}min";
+    }
+
+    private void NavigateToRifa(Guid rifaId)
+    {
+        Navigation.NavigateTo($"/rifas/{rifaId}");
+    }
+
+    private void NavigateToComprar(Guid rifaId)
+    {
+        Navigation.NavigateTo($"/rifas/{rifaId}/comprar");
     }
 }
