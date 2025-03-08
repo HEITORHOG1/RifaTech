@@ -1,10 +1,9 @@
-﻿// RifaTech.UI/MauiProgram.cs (Ajustado)
-
-using Blazored.LocalStorage;
+﻿using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Services;
+using RifaTech.UI.Shared.Config;
 using RifaTech.UI.Shared.Services;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -27,12 +26,9 @@ namespace RifaTech.UI
 
             // Registrar Local Storage
             builder.Services.AddBlazoredLocalStorage();
-            // RifaTech.UI/MauiProgram.cs (atualizado)
-
             builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
-            // Registrar MudBlazor
 
-            // Register MudBlazor services
+            // Registrar MudBlazor
             builder.Services.AddMudServices(config =>
             {
                 config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
@@ -43,12 +39,13 @@ namespace RifaTech.UI
                 config.SnackbarConfiguration.HideTransitionDuration = 500;
                 config.SnackbarConfiguration.ShowTransitionDuration = 500;
             });
-            // Configurar HttpClient
+
+            // Configurar HttpClient usando AppConfig
             builder.Services.AddScoped(sp =>
             {
                 var httpClient = new HttpClient
                 {
-                    BaseAddress = new Uri("https://localhost:7212/") // URL da API
+                    BaseAddress = new Uri(AppConfig.Api.BaseUrl) // URL da API centralizada
                 };
 
                 // Configurar serialização JSON para evitar problemas com referências circulares
