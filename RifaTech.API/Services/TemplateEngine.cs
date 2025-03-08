@@ -230,5 +230,284 @@ namespace RifaTech.API.Services
                 </body>
                 </html>";
         }
+
+        private string GetPaymentConfirmationTemplate()
+        {
+            return @"
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #4A6FE8; color: white; padding: 10px 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { font-size: 12px; text-align: center; margin-top: 20px; color: #888; }
+                .info-box { background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin: 15px 0; }
+                .cta-button { display: inline-block; background-color: #4A6FE8; color: white; padding: 10px 20px;
+                             text-decoration: none; border-radius: 5px; margin-top: 20px; }
+                .numbers { font-weight: bold; color: #4A6FE8; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Pagamento Confirmado</h1>
+                </div>
+                <div class='content'>
+                    <p>Olá <strong>{{ClienteName}}</strong>,</p>
+                    
+                    <p>Seu pagamento para a rifa <strong>{{RifaName}}</strong> foi confirmado com sucesso!</p>
+                    
+                    <div class='info-box'>
+                        <h3>Detalhes da compra:</h3>
+                        <p><strong>Valor total:</strong> {{ValorTotal}}</p>
+                        <p><strong>Seus números:</strong> <span class='numbers'>{{TicketNumbers}}</span></p>
+                        <p><strong>Data do sorteio:</strong> {{DrawDateTime}}</p>
+                    </div>
+                    
+                    <p>Agradecemos sua participação e boa sorte no sorteio!</p>
+                    
+                    <p>Você pode acompanhar o resultado do sorteio através do nosso site ou aplicativo.</p>
+                    
+                    <a href='https://rifatech.com/sorteios' class='cta-button'>Acompanhar Sorteios</a>
+                </div>
+                <div class='footer'>
+                    <p>Esta é uma mensagem automática. Por favor, não responda a este e-mail.</p>
+                    <p>&copy; {{CurrentYear}} RifaTech. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        }
+
+        private string GetPaymentExpiredTemplate()
+        {
+            return @"
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #E74C3C; color: white; padding: 10px 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { font-size: 12px; text-align: center; margin-top: 20px; color: #888; }
+                .info-box { background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin: 15px 0; }
+                .cta-button { display: inline-block; background-color: #4A6FE8; color: white; padding: 10px 20px;
+                             text-decoration: none; border-radius: 5px; margin-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Pagamento Expirado</h1>
+                </div>
+                <div class='content'>
+                    <p>Olá <strong>{{ClienteName}}</strong>,</p>
+                    
+                    <p>Infelizmente, o tempo para pagamento da sua rifa <strong>{{RifaName}}</strong> expirou.</p>
+                    
+                    <div class='info-box'>
+                        <h3>Detalhes da compra:</h3>
+                        <p><strong>Valor total:</strong> {{ValorTotal}}</p>
+                        <p><strong>Data de expiração:</strong> {{ExpirationTime}}</p>
+                    </div>
+                    
+                    <p>Você ainda pode participar realizando uma nova compra em nosso site.</p>
+                    
+                    <a href='https://rifatech.com/rifas' class='cta-button'>Comprar Novos Tickets</a>
+                </div>
+                <div class='footer'>
+                    <p>Esta é uma mensagem automática. Por favor, não responda a este e-mail.</p>
+                    <p>&copy; {{CurrentYear}} RifaTech. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        }
+
+        private string GetDrawReminderTemplate()
+        {
+            return @"
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #F39C12; color: white; padding: 10px 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { font-size: 12px; text-align: center; margin-top: 20px; color: #888; }
+                .info-box { background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin: 15px 0; }
+                .cta-button { display: inline-block; background-color: #4A6FE8; color: white; padding: 10px 20px;
+                             text-decoration: none; border-radius: 5px; margin-top: 20px; }
+                .numbers { font-weight: bold; color: #4A6FE8; }
+                .countdown { font-size: 20px; font-weight: bold; color: #F39C12; text-align: center; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Lembrete de Sorteio</h1>
+                </div>
+                <div class='content'>
+                    <p>Olá <strong>{{ClienteName}}</strong>,</p>
+                    
+                    <p>O sorteio da rifa <strong>{{RifaName}}</strong> está se aproximando!</p>
+                    
+                    <div class='countdown'>
+                        Tempo restante: {{TimeRemaining}}
+                    </div>
+                    
+                    <div class='info-box'>
+                        <h3>Detalhes da sua participação:</h3>
+                        <p><strong>Seus números:</strong> <span class='numbers'>{{TicketNumbers}}</span></p>
+                        <p><strong>Data do sorteio:</strong> {{DrawDateTime}}</p>
+                    </div>
+                    
+                    <p>Não perca! Você poderá acompanhar o sorteio ao vivo em nosso site.</p>
+                    
+                    <a href='https://rifatech.com/sorteios/ao-vivo' class='cta-button'>Acompanhar Sorteio</a>
+                </div>
+                <div class='footer'>
+                    <p>Esta é uma mensagem automática. Por favor, não responda a este e-mail.</p>
+                    <p>&copy; {{CurrentYear}} RifaTech. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        }
+
+        private string GetDrawResultTemplate()
+        {
+            return @"
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #2ECC71; color: white; padding: 10px 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { font-size: 12px; text-align: center; margin-top: 20px; color: #888; }
+                .info-box { background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin: 15px 0; }
+                .cta-button { display: inline-block; background-color: #4A6FE8; color: white; padding: 10px 20px;
+                             text-decoration: none; border-radius: 5px; margin-top: 20px; }
+                .winner { font-size: 24px; font-weight: bold; color: #2ECC71; text-align: center; margin: 20px 0; }
+                .winner-number { font-size: 32px; background-color: #2ECC71; color: white; padding: 10px; 
+                                border-radius: 50%; display: inline-block; width: 50px; height: 50px; 
+                                line-height: 50px; text-align: center; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Resultado do Sorteio</h1>
+                </div>
+                <div class='content'>
+                    <p>O sorteio da rifa <strong>{{RifaName}}</strong> foi realizado!</p>
+                    
+                    <div class='winner'>
+                        Número sorteado: <div class='winner-number'>{{WinningNumber}}</div>
+                    </div>
+                    
+                    <div class='info-box'>
+                        <h3>Detalhes do sorteio:</h3>
+                        <p><strong>Data do sorteio:</strong> {{DrawDateTime}}</p>
+                        <p><strong>Ganhador:</strong> {{WinnerName}}</p>
+                    </div>
+                    
+                    <p>Não foi o ganhador desta vez? Não desanime! Temos novas rifas disponíveis.</p>
+                    
+                    <a href='https://rifatech.com/rifas' class='cta-button'>Ver Novas Rifas</a>
+                </div>
+                <div class='footer'>
+                    <p>Esta é uma mensagem automática. Por favor, não responda a este e-mail.</p>
+                    <p>&copy; {{CurrentYear}} RifaTech. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        }
+
+        private string GetWinnerNotificationTemplate()
+        {
+            return @"
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #2ECC71; color: white; padding: 10px 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { font-size: 12px; text-align: center; margin-top: 20px; color: #888; }
+                .info-box { background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin: 15px 0; }
+                .cta-button { display: inline-block; background-color: #4A6FE8; color: white; padding: 10px 20px;
+                             text-decoration: none; border-radius: 5px; margin-top: 20px; }
+                .congratulations { font-size: 24px; font-weight: bold; color: #2ECC71; text-align: center; margin: 20px 0; }
+                .prize { font-size: 32px; font-weight: bold; text-align: center; margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Parabéns! Você Ganhou!</h1>
+                </div>
+                <div class='content'>
+                    <p>Olá <strong>{{ClienteName}}</strong>,</p>
+                    
+                    <div class='congratulations'>
+                        PARABÉNS! Você é o grande vencedor da rifa {{RifaName}}!
+                    </div>
+                    
+                    <div class='prize'>
+                        Prêmio: {{PrizeValue}}
+                    </div>
+                    
+                    <div class='info-box'>
+                        <h3>Detalhes do sorteio:</h3>
+                        <p><strong>Seu número sorteado:</strong> {{WinningNumber}}</p>
+                        <p><strong>Para receber seu prêmio:</strong> {{ContactInfo}}</p>
+                    </div>
+                    
+                    <p>Entre em contato o mais breve possível para combinarmos a entrega do seu prêmio!</p>
+                </div>
+                <div class='footer'>
+                    <p>Esta é uma mensagem automática. Por favor, não responda a este e-mail.</p>
+                    <p>&copy; {{CurrentYear}} RifaTech. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        }
+
+        private string GetGenericTemplate()
+        {
+            return @"
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #4A6FE8; color: white; padding: 10px 20px; text-align: center; }
+                .content { padding: 20px; }
+                .footer { font-size: 12px; text-align: center; margin-top: 20px; color: #888; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>RifaTech - Notificação</h1>
+                </div>
+                <div class='content'>
+                    <p>Olá,</p>
+                    <p>Esta é uma notificação do sistema RifaTech.</p>
+                    <p>Para mais informações, acesse nosso site ou entre em contato conosco.</p>
+                </div>
+                <div class='footer'>
+                    <p>Esta é uma mensagem automática. Por favor, não responda a este e-mail.</p>
+                    <p>&copy; {{CurrentYear}} RifaTech. Todos os direitos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        }
     }
 }

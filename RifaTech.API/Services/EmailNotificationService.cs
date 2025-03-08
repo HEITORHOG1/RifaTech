@@ -27,7 +27,7 @@ namespace RifaTech.API.Services
             _logger = logger;
             _templateEngine = templateEngine;
 
-            // Carregando configurações de e-mail
+            // Loading email configuration
             _smtpServer = _configuration["Email:SmtpServer"];
             _smtpPort = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
             _smtpUsername = _configuration["Email:Username"];
@@ -47,7 +47,7 @@ namespace RifaTech.API.Services
 
             if (string.IsNullOrEmpty(notification.Recipient))
             {
-                _logger.LogWarning("E-mail do destinatário não fornecido, notificação não será enviada");
+                _logger.LogWarning("Recipient email not provided, notification will not be sent");
                 return;
             }
 
@@ -57,11 +57,11 @@ namespace RifaTech.API.Services
                 string body = _templateEngine.RenderTemplate(template, notification);
 
                 await SendEmailAsync(notification.Recipient, notification.Subject, body);
-                _logger.LogInformation($"E-mail de {notification.NotificationType} enviado para {notification.Recipient}");
+                _logger.LogInformation($"Email notification of type {notification.NotificationType} sent to {notification.Recipient}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erro ao enviar e-mail de {notification.NotificationType} para {notification.Recipient}");
+                _logger.LogError(ex, $"Error sending {notification.NotificationType} email to {notification.Recipient}");
             }
         }
 
@@ -69,7 +69,7 @@ namespace RifaTech.API.Services
         {
             if (string.IsNullOrEmpty(compraResponse.Cliente?.Email))
             {
-                _logger.LogWarning("E-mail do cliente não fornecido, notificação não será enviada");
+                _logger.LogWarning("Customer email not provided, notification will not be sent");
                 return;
             }
 
@@ -94,7 +94,7 @@ namespace RifaTech.API.Services
         {
             if (string.IsNullOrEmpty(cliente?.Email))
             {
-                _logger.LogWarning("E-mail do cliente não fornecido, notificação não será enviada");
+                _logger.LogWarning("Customer email not provided, notification will not be sent");
                 return;
             }
 
@@ -104,7 +104,7 @@ namespace RifaTech.API.Services
                 ClienteName = cliente.Name,
                 RifaName = rifa.Name,
                 RifaId = rifa.Id,
-                ValorTotal = payment.Amount,
+                ValorTotal = (decimal)payment.Amount,
                 TicketNumbers = ticketNumbers,
                 DrawDateTime = rifa.DrawDateTime
             };
@@ -116,7 +116,7 @@ namespace RifaTech.API.Services
         {
             if (string.IsNullOrEmpty(cliente?.Email))
             {
-                _logger.LogWarning("E-mail do cliente não fornecido, notificação não será enviada");
+                _logger.LogWarning("Customer email not provided, notification will not be sent");
                 return;
             }
 
@@ -126,7 +126,7 @@ namespace RifaTech.API.Services
                 ClienteName = cliente.Name,
                 RifaName = rifa.Name,
                 RifaId = rifa.Id,
-                ValorTotal = payment.Amount,
+                ValorTotal = (decimal)payment.Amount,
                 ExpirationTime = payment.ExpirationTime ?? DateTime.UtcNow
             };
 
@@ -137,7 +137,7 @@ namespace RifaTech.API.Services
         {
             if (string.IsNullOrEmpty(cliente?.Email))
             {
-                _logger.LogWarning("E-mail do cliente não fornecido, notificação não será enviada");
+                _logger.LogWarning("Customer email not provided, notification will not be sent");
                 return;
             }
 
@@ -155,9 +155,9 @@ namespace RifaTech.API.Services
             await SendNotificationAsync(notification);
         }
 
-        public async Task SendDrawResultAsync(RifaDTO rifa, DrawDTO draw, List<ClienteDTO> participantes)
+        public async Task SendDrawResultAsync(RifaDTO rifa, DrawDTO draw, List<ClienteDTO> participants)
         {
-            foreach (var cliente in participantes)
+            foreach (var cliente in participants)
             {
                 if (string.IsNullOrEmpty(cliente?.Email))
                 {
@@ -171,7 +171,7 @@ namespace RifaTech.API.Services
                     RifaId = rifa.Id,
                     DrawDateTime = draw.DrawDateTime,
                     WinningNumber = int.Parse(draw.WinningNumber),
-                    WinnerName = "Ganhador" // Temos que buscar o nome do cliente ganhador
+                    WinnerName = "Ganhador" // We have to fetch the winner's name
                 };
 
                 await SendNotificationAsync(notification);
@@ -182,7 +182,7 @@ namespace RifaTech.API.Services
         {
             if (string.IsNullOrEmpty(winner?.Email))
             {
-                _logger.LogWarning("E-mail do ganhador não fornecido, notificação não será enviada");
+                _logger.LogWarning("Winner email not provided, notification will not be sent");
                 return;
             }
 
@@ -210,17 +210,17 @@ namespace RifaTech.API.Services
                 NotificationType.DrawReminder => "DrawReminder",
                 NotificationType.DrawResult => "DrawResult",
                 NotificationType.WinnerNotification => "WinnerNotification",
-                _ => throw new ArgumentException($"Tipo de notificação não suportado: {type}")
+                _ => throw new ArgumentException($"Notification type not supported: {type}")
             };
         }
 
         private async Task SendEmailAsync(string recipient, string subject, string body)
         {
-            // Verifica se as configurações de e-mail estão presentes
+            // Check if email settings are present
             if (string.IsNullOrEmpty(_smtpServer) || string.IsNullOrEmpty(_smtpUsername) ||
                 string.IsNullOrEmpty(_smtpPassword) || string.IsNullOrEmpty(_senderEmail))
             {
-                _logger.LogWarning("Configurações de e-mail incompletas, e-mail não será enviado");
+                _logger.LogWarning("Incomplete email settings, email will not be sent");
                 return;
             }
 
@@ -243,5 +243,4 @@ namespace RifaTech.API.Services
             await client.SendMailAsync(message);
         }
     }
-}
 }

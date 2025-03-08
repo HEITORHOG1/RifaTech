@@ -20,14 +20,28 @@ namespace RifaTech.API.Extensions
 
             // Add CompraRapida service
             services.AddScoped<ICompraRapidaService, CompraRapidaService>();
-            // Add cache service (this is now done in Program.cs as a singleton)
+
+            // Add cache service
             services.AddSingleton<ICacheService, MemoryCacheService>();
 
-            services.AddScoped<INotificationService, EmailNotificationService>();
+            // Add notification services
+            services.AddScoped<ITemplateEngine, TemplateEngine>();
+            services.AddScoped<EmailNotificationService>();
+            services.AddScoped<IWhatsAppService, WhatsAppService>();
+            services.AddScoped<INotificationService, MultiChannelNotificationService>();
+
+            // Add background services
+            services.AddHostedService<PaymentStatusVerificationService>();
+            services.AddHostedService<NotificationBackgroundService>();
+
             // Add MercadoPago service
             services.AddScoped<IMercadoPagoService, MercadoPagoService>();
 
+            // Add Webhook service
             services.AddScoped<IWebhookService, WebhookService>();
+
+            // Add HttpClient for WhatsApp API
+            services.AddHttpClient<IWhatsAppService, WhatsAppService>();
         }
     }
 }

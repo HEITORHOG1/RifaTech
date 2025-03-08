@@ -36,40 +36,40 @@ namespace RifaTech.API.Services
         {
             try
             {
-                // Validar a rifa
+                // Validate the rifa
                 var rifaGuid = Guid.Parse(rifaId);
                 var rifa = await _rifaService.GetRifaByIdAsync(rifaGuid);
 
                 if (rifa == null)
                 {
-                    throw new KeyNotFoundException($"Rifa com ID {rifaId} não encontrada");
+                    throw new KeyNotFoundException($"Rifa with ID {rifaId} not found");
                 }
 
                 if (rifa.DrawDateTime <= DateTime.UtcNow)
                 {
-                    throw new InvalidOperationException("Esta rifa já foi encerrada");
+                    throw new InvalidOperationException("This rifa has already ended");
                 }
 
-                // Validar a quantidade de tickets
-                int ticketsDisponiveis = rifa.MaxTickets - (rifa.Tickets?.Count ?? 0);
-                if (compraDto.Quantidade > ticketsDisponiveis)
+                // Validate ticket quantity
+                int availableTickets = rifa.MaxTickets - (rifa.Tickets?.Count ?? 0);
+                if (compraDto.Quantidade > availableTickets)
                 {
-                    throw new InvalidOperationException($"Não há tickets suficientes disponíveis. Disponíveis: {ticketsDisponiveis}");
+                    throw new InvalidOperationException($"Not enough tickets available. Available: {availableTickets}");
                 }
 
-                // Buscar ou criar cliente
+                // Find or create cliente
                 ClienteDTO cliente;
 
-                var clienteExistente = await _clienteService.GetClienteByEmailOrPhoneNumberOrCPFAsync(
+                var existingCliente = await _clienteService.GetClienteByEmailOrPhoneNumberOrCPFAsync(
                     compraDto.Email,
                     compraDto.PhoneNumber,
                     compraDto.CPF
                 );
 
-                if (clienteExistente == null)
+                if (existingCliente == null)
                 {
-                    // Criar novo cliente
-                    var novoCliente = new ClienteDTO
+                    // Create new cliente
+                    var newCliente = new ClienteDTO
                     {
                         Name = compraDto.Name,
                         Email = compraDto.Email,
@@ -77,37 +77,37 @@ namespace RifaTech.API.Services
                         CPF = compraDto.CPF
                     };
 
-                    cliente = await _clienteService.CreateClienteAsync(novoCliente);
-                    _logger.LogInformation($"Novo cliente criado: {cliente.Id}");
+                    cliente = await _clienteService.CreateClienteAsync(newCliente);
+                    _logger.LogInformation($"New client created: {cliente.Id}");
                 }
                 else
                 {
-                    cliente = clienteExistente;
-                    _logger.LogInformation($"Cliente existente encontrado: {cliente.Id}");
+                    cliente = existingCliente;
+                    _logger.LogInformation($"Existing client found: {cliente.Id}");
 
-                    // Atualizar informações do cliente se necessário
-                    bool atualizarCliente = false;
+                    // Update cliente information if needed
+                    bool updateCliente = false;
 
                     if (!string.IsNullOrEmpty(compraDto.Name) && compraDto.Name != cliente.Name)
                     {
                         cliente.Name = compraDto.Name;
-                        atualizarCliente = true;
+                        updateCliente = true;
                     }
 
                     if (!string.IsNullOrEmpty(compraDto.CPF) && compraDto.CPF != cliente.CPF)
                     {
                         cliente.CPF = compraDto.CPF;
-                        atualizarCliente = true;
+                        updateCliente = true;
                     }
 
-                    if (atualizarCliente)
+                    if (updateCliente)
                     {
                         await _clienteService.UpdateClienteAsync(cliente.Id, cliente);
-                        _logger.LogInformation($"Informações do cliente atualizadas: {cliente.Id}");
+                        _logger.LogInformation($"Client information updated: {cliente.Id}");
                     }
                 }
 
-                // Criar ticket
+                // Create ticket
                 var ticketDto = new TicketDTO
                 {
                     RifaId = rifaGuid,
@@ -115,34 +115,49 @@ namespace RifaTech.API.Services
                     Quantidade = compraDto.Quantidade
                 };
 
-                var numerosGerados = await _ticketService.PurchaseTicketAsync(rifaId, ticketDto);
-                _logger.LogInformation($"Gerados {numerosGerados.Count} tickets para a rifa {rifaId}");
+                var generatedNumbers = await _ticketService.PurchaseTicketAsync(rifaId, ticketDto);
+                _logger.LogInformation($"Generated {generatedNumbers.Count} tickets for rifa {rifaId}");
 
-                // Calcular valor total
-                decimal valorTotal = (decimal)rifa.TicketPrice * compraDto.Quantidade;
+                // Calculate total value
+                decimal totalValue = (decimal)rifa.TicketPrice * compraDto.Quantidade;
 
-                // Gerar pagamento PIX
-                var payment = await _paymentService.IniciarPagamentoPix(rifa.Id, compraDto.Quantidade, valorTotal, cliente.Id);
-                _logger.LogInformation($"Pagamento PIX gerado: {payment.Id}");
+                // Generate PIX payment
+                var payment = await _paymentService.IniciarPagamentoPix(rifa.Id, compraDto.Quantidade, totalValue, cliente.Id);
+                _logger.LogInformation($"Generated PIX payment: {payment.Id}");
 
-                // Montar resposta
-                return new CompraRapidaResponseDTO
+                // Prepare response
+                var response = new CompraRapidaResponseDTO
                 {
                     Success = true,
-                    Message = "Compra processada com sucesso",
+                    Message = "Purchase processed successfully",
                     Cliente = cliente,
                     Payment = payment,
-                    NumerosGerados = numerosGerados,
-                    ValorTotal = valorTotal,
+                    NumerosGerados = generatedNumbers,
+                    ValorTotal = totalValue,
                     RifaId = rifaGuid,
                     RifaNome = rifa.Name
                 };
+
+                // Send purchase confirmation notification
+                try
+                {
+                    await _notificationService.SendPurchaseConfirmationAsync(response);
+                    _logger.LogInformation($"Purchase confirmation notification sent to {cliente.Email}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error sending purchase confirmation notification");
+                    // Continue processing, do not throw
+                }
+
+                return response;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Erro ao processar compra rápida para rifa {rifaId}");
+                _logger.LogError(ex, $"Error processing quick purchase for rifa {rifaId}");
                 throw;
             }
         }
     }
 }
+
