@@ -9,7 +9,7 @@ namespace RifaTech.API.Entities
         public string PhoneNumber { get; set; }
 
         [Required(ErrorMessage = "Email é obrigatório.")]
-        [StringLength(25, ErrorMessage = "Email não pode exceder 25 caracteres.")]
+        [StringLength(50, ErrorMessage = "Email não pode exceder 50 caracteres.")]
         public string? Email { get; set; }
 
         [Required(ErrorMessage = "Name é obrigatório.")]
