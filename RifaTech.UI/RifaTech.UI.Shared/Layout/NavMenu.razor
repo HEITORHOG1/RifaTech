@@ -1,45 +1,67 @@
-﻿@using MudBlazor
-
-<MudNavMenu Class="py-2">
+﻿@* NavMenu.razor *@
+<MudNavMenu Rounded="true" Margin="Margin.Normal" Class="mt-2" Dense="true">
     <MudNavLink Href="/"
-                Icon="@Icons.Material.Filled.Home"
+                Icon="@Icons.Material.Outlined.Home"
+                IconSize="Size.Small"
+                IconColor="Color.Primary"
                 Match="NavLinkMatch.All">
         Início
     </MudNavLink>
 
     <MudNavGroup Title="Rifas"
-                 Icon="@Icons.Material.Filled.CardGiftcard"
+                 Icon="@Icons.Material.Outlined.CardGiftcard"
+                 IconColor="Color.Primary"
+                 IconSize="Size.Small"
+                 HideExpandIcon="false"
                  Expanded="true">
         <MudNavLink Href="/rifas"
-                    Icon="@Icons.Material.Filled.List"
-                    Match="NavLinkMatch.Prefix">
+                    Icon="@Icons.Material.Outlined.List"
+                    IconSize="Size.Small"
+                    IconColor="Color.Inherit"
+                    Match="NavLinkMatch.Prefix"
+                    Class="ml-4">
             Rifas Disponíveis
         </MudNavLink>
 
         <MudNavLink Href="/rifas/minhas"
-                    Icon="@Icons.Material.Filled.Bookmark"
-                    Match="NavLinkMatch.Prefix">
+                    Icon="@Icons.Material.Outlined.Bookmark"
+                    IconSize="Size.Small"
+                    IconColor="Color.Inherit"
+                    Match="NavLinkMatch.Prefix"
+                    Class="ml-4">
             Minhas Rifas
         </MudNavLink>
 
         <MudNavLink Href="/rifas/criar"
-                    Icon="@Icons.Material.Filled.Add"
-                    Match="NavLinkMatch.Prefix">
+                    Icon="@Icons.Material.Outlined.Add"
+                    IconSize="Size.Small"
+                    IconColor="Color.Inherit"
+                    Match="NavLinkMatch.Prefix"
+                    Class="ml-4">
             Criar Rifa
         </MudNavLink>
     </MudNavGroup>
 
     <MudNavGroup Title="Tickets"
-                 Icon="@Icons.Material.Filled.ConfirmationNumber">
+                 Icon="@Icons.Material.Outlined.ConfirmationNumber"
+                 IconColor="Color.Primary"
+                 IconSize="Size.Small"
+                 HideExpandIcon="false">
         <MudNavLink Href="/tickets/meus"
-                    Icon="@Icons.Material.Filled.Receipt"
-                    Match="NavLinkMatch.Prefix">
+                    Icon="@Icons.Material.Outlined.Receipt"
+                    IconSize="Size.Small"
+                    IconColor="Color.Inherit"
+                    Match="NavLinkMatch.Prefix"
+                    Class="ml-4">
             Meus Tickets
         </MudNavLink>
 
         <MudNavLink Href="/tickets/comprar"
-                    Icon="@Icons.Material.Filled.ShoppingCart"
-                    Match="NavLinkMatch.Prefix">
+                    Icon="@Icons.Material.Outlined.ShoppingCart"
+                    IconSize="Size.Small"
+                    IconColor="Color.Inherit"
+                    Match="NavLinkMatch.Prefix"
+                    Class="ml-4">
             Comprar Tickets
         </MudNavLink>
     </MudNavGroup>
@@ -47,29 +69,43 @@
     @if (IsAdmin)
     {
         <MudNavGroup Title="Administração"
-                     Icon="@Icons.Material.Filled.AdminPanelSettings"
-                     Color="Color.Error">
+                     Icon="@Icons.Material.Outlined.AdminPanelSettings"
+                     IconColor="Color.Error"
+                     IconSize="Size.Small"
+                     HideExpandIcon="false">
             <MudNavLink Href="/admin/usuarios"
-                        Icon="@Icons.Material.Filled.People"
-                        Match="NavLinkMatch.Prefix">
+                        Icon="@Icons.Material.Outlined.People"
+                        IconSize="Size.Small"
+                        IconColor="Color.Inherit"
+                        Match="NavLinkMatch.Prefix"
+                        Class="ml-4">
                 Usuários
             </MudNavLink>
 
             <MudNavLink Href="/admin/pagamentos"
-                        Icon="@Icons.Material.Filled.Payment"
-                        Match="NavLinkMatch.Prefix">
+                        Icon="@Icons.Material.Outlined.Payment"
+                        IconSize="Size.Small"
+                        IconColor="Color.Inherit"
+                        Match="NavLinkMatch.Prefix"
+                        Class="ml-4">
                 Pagamentos
             </MudNavLink>
 
             <MudNavLink Href="/admin/sorteios"
-                        Icon="@Icons.Material.Filled.Event"
-                        Match="NavLinkMatch.Prefix">
+                        Icon="@Icons.Material.Outlined.Event"
+                        IconSize="Size.Small"
+                        IconColor="Color.Inherit"
+                        Match="NavLinkMatch.Prefix"
+                        Class="ml-4">
                 Sorteios
             </MudNavLink>
 
             <MudNavLink Href="/admin/relatorios"
-                        Icon="@Icons.Material.Filled.Assessment"
-                        Match="NavLinkMatch.Prefix">
+                        Icon="@Icons.Material.Outlined.Assessment"
+                        IconSize="Size.Small"
+                        IconColor="Color.Inherit"
+                        Match="NavLinkMatch.Prefix"
+                        Class="ml-4">
                 Relatórios
             </MudNavLink>
         </MudNavGroup>
@@ -78,7 +114,9 @@
     <MudDivider Class="my-2" />
 
     <MudNavLink Href="/ajuda"
-                Icon="@Icons.Material.Filled.Help"
+                Icon="@Icons.Material.Outlined.Help"
+                IconColor="Color.Primary"
+                IconSize="Size.Small"
                 Match="NavLinkMatch.Prefix">
         Ajuda e Suporte
     </MudNavLink>

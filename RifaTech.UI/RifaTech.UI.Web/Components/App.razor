@@ -1,1 +1,26 @@
-﻿<Routes @rendermode="@InteractiveServer" />
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+
+    <!-- MudBlazor Stylesheet -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+
+    <link rel="stylesheet" href="HydroMeasure.Hibrid.Web.styles.css" />
+    <link rel="icon" type="image/png" href="_content/HydroMeasure.Hibrid.Shared/favicon.png" />
+    <HeadOutlet @rendermode="InteractiveAuto" />
+    <title>RIFA</title>
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveAuto" />
+
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+
+</html>

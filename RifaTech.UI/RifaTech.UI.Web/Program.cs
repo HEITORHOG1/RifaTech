@@ -2,6 +2,7 @@
 
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
+using MudBlazor;
 using MudBlazor.Services;
 using RifaTech.UI.Shared.Services;
 using RifaTech.UI.Web.Components;
@@ -16,8 +17,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-// Registrar MudBlazor
-builder.Services.AddMudServices();
+
 
 // Registrar Local Storage
 builder.Services.AddBlazoredLocalStorage();
@@ -27,7 +27,7 @@ builder.Services.AddScoped(sp =>
 {
     var httpClient = new HttpClient
     {
-        BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5024")
+        BaseAddress = new Uri(builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7212/")
     };
 
     // Configurar serialização JSON para evitar problemas com referências circulares
@@ -39,7 +39,17 @@ builder.Services.AddScoped(sp =>
 
     return httpClient;
 });
-
+// Register MudBlazor services
+builder.Services.AddMudServices(config =>
+{
+    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+    config.SnackbarConfiguration.PreventDuplicates = false;
+    config.SnackbarConfiguration.NewestOnTop = true;
+    config.SnackbarConfiguration.ShowCloseIcon = true;
+    config.SnackbarConfiguration.VisibleStateDuration = 5000;
+    config.SnackbarConfiguration.HideTransitionDuration = 500;
+    config.SnackbarConfiguration.ShowTransitionDuration = 500;
+});
 // Configurar Autenticação
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 // RifaTech.UI.Web/Program.cs (atualizado)

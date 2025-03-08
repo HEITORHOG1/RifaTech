@@ -1,86 +1,120 @@
-﻿@using MudBlazor
+﻿@* RifaCard.razor *@
 @using RifaTech.DTOs.DTOs
 
-<MudCard Elevation="3" Class="h-100 mud-rifa-card">
-    <MudCardMedia Image="@(string.IsNullOrEmpty(Rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{Rifa.Base64Img}")"
-                  Height="200" />
-    <MudCardContent>
-        <MudText Typo="Typo.h6" Class="mb-1">@Rifa.Name</MudText>
-        <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary text-truncate">
-            @Rifa.Description
+<MudCard Elevation="2" Class="rifa-card h-100">
+    <MudCardMedia Image="@GetImageUrl()" Height="200" />
+    
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@Rifa.Name</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Surface" Style="margin-top: 4px;">
+                @Rifa.Description
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudChip Color="Color.Primary" Size="Size.Small" T="string">
+                @FormatCurrency(Rifa.TicketPrice)
+            </MudChip>
+        </CardHeaderActions>
+    </MudCardHeader>
+    
+    <MudCardContent Class="pt-0">
+        <MudDivider Class="mb-3" />
+        
+        <div class="d-flex align-center mb-2">
+            <MudIcon Icon="@Icons.Material.Outlined.CalendarToday" Size="Size.Small" Class="mr-2" />
+            <MudText Typo="Typo.body2">
+                Sorteio: @FormatDate(Rifa.DrawDateTime)
+            </MudText>
+        </div>
+        
+        <div class="d-flex align-center mb-3">
+            <MudIcon Icon="@Icons.Material.Outlined.PriceChange" Size="Size.Small" Class="mr-2" />
+            <MudText Typo="Typo.body2">
+                Prêmio: @FormatCurrency((float)Rifa.TicketPrice)
+            </MudText>
+        </div>
+        
+        <MudText Typo="Typo.caption" Class="mt-1 mb-1">
+            Tickets disponíveis: @GetAvailableTickets() de @Rifa.MaxTickets
         </MudText>
-
-        <MudDivider Class="my-2" />
-
-        <MudText Typo="Typo.body2" Class="mb-1">
-            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Small" Class="mr-1" />
-            Sorteio: @Rifa.DrawDateTime.ToString("dd/MM/yyyy")
-        </MudText>
-
-        <MudText Typo="Typo.body2" Class="mb-1">
-            <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" Class="mr-1" />
-            Valor: @Rifa.TicketPrice.ToString("C")
-        </MudText>
-
-        @if (Rifa.MaxTickets > 0)
-        {
-            var percentagem = CalcularPercentagemVendida();
-            var color = percentagem < 40 ? Color.Success :
-            percentagem < 70 ? Color.Warning :
-            Color.Error;
-
-            <div class="mt-2">
-                <MudText Typo="Typo.caption" Class="mb-1">
-                    Tickets disponíveis: @GetTicketsDisponiveisText()
-                </MudText>
-                <MudProgressLinear Color="@color" Value="@percentagem" Class="my-1" />
-            </div>
-        }
+        
+        <MudProgressLinear Color="@GetProgressColor()" 
+                         Value="@GetPercentageSold()" 
+                         Class="my-1" />
     </MudCardContent>
+    
     <MudCardActions Class="d-flex justify-space-between">
-        <MudButton Variant="Variant.Text"
-                   Color="Color.Primary"
-                   Href="@($"/rifas/{Rifa.Id}")">
+        <MudButton Variant="Variant.Text" 
+                 Color="Color.Primary" 
+                 Href="@($"/rifas/{Rifa.Id}")">
             Detalhes
         </MudButton>
-        <MudButton Variant="Variant.Filled"
-                   Color="Color.Secondary"
-                   Href="@($"/rifas/{Rifa.Id}/comprar")">
+        
+        <MudButton Variant="Variant.Filled" 
+                 Color="Color.Secondary" 
+                 Href="@($"/rifas/{Rifa.Id}/comprar")">
             Comprar
         </MudButton>
     </MudCardActions>
 </MudCard>
 
 <style>
-    .mud-rifa-card {
-        transition: transform 0.2s, box-shadow 0.2s;
+    .rifa-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     }
 
-        .mud-rifa-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0,0,0,0.2);
-        }
+    .rifa-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--mud-elevation-4);
+    }
+    
 </style>
 
 @code {
     [Parameter]
     public RifaDTO Rifa { get; set; }
-
-    private int CalcularPercentagemVendida()
+    
+    private string GetImageUrl()
+    {
+        return string.IsNullOrEmpty(Rifa.Base64Img) 
+            ? "/images/default-rifa.jpg" 
+            : $"data:image/png;base64,{Rifa.Base64Img}";
+    }
+    
+    private string FormatCurrency(float value)
+    {
+        return ((decimal)value).ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+    }
+    
+    private string FormatDate(DateTime date)
+    {
+        return date.ToString("dd/MM/yyyy");
+    }
+    
+    private string GetAvailableTickets()
+    {
+        int ticketsSold = Rifa.Tickets?.Count ?? 0;
+        int available = Rifa.MaxTickets - ticketsSold;
+        return available.ToString();
+    }
+    
+    private double GetPercentageSold()
     {
         if (Rifa.MaxTickets <= 0) return 0;
-
-        var ticketsVendidos = Rifa.Tickets?.Count ?? 0;
-        var porcentagem = (ticketsVendidos * 100) / Rifa.MaxTickets;
-
-        return porcentagem;
+        
+        int ticketsSold = Rifa.Tickets?.Count ?? 0;
+        double percentage = (double)ticketsSold * 100 / Rifa.MaxTickets;
+        
+        return percentage;
     }
-
-    private string GetTicketsDisponiveisText()
+    
+    private Color GetProgressColor()
     {
-        var ticketsVendidos = Rifa.Tickets?.Count ?? 0;
-        var ticketsDisponveis = Rifa.MaxTickets - ticketsVendidos;
-
-        return $"{ticketsDisponveis} de {Rifa.MaxTickets}";
+        double percentage = GetPercentageSold();
+        
+        if (percentage < 40) return Color.Success;
+        if (percentage < 70) return Color.Warning;
+        return Color.Error;
     }
 }

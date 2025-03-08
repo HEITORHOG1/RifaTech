@@ -1,87 +1,86 @@
-﻿@inherits LayoutComponentBase
+﻿@* MainLayout.razor *@
+@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
-@using RifaTech.DTOs.DTOs
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
-@inject ILocalStorageService LocalStorage
 @inject AuthenticationStateProvider AuthStateProvider
 
-<MudThemeProvider Theme="_currentTheme" />
+<MudThemeProvider Theme="@_currentTheme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
-<MudPopoverProvider />
+<MudPopoverProvider /> <!-- Adicione esta linha -->
 
 <MudLayout>
-    <MudAppBar Elevation="1" Color="Color.Primary">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" 
-                     Color="Color.Inherit" 
-                     Edge="Edge.Start" 
-                     OnClick="@ToggleDrawer" />
-        
-        <MudText Typo="Typo.h5" Class="ml-2 mud-appbar-logo">
-            <MudIcon Icon="@Icons.Material.Filled.Casino" Class="mr-2" />
+    <MudAppBar Elevation="1" Color="Color.Primary" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       Size="Size.Small"
+                       OnClick="@ToggleDrawer" />
+
+        <MudText Typo="Typo.h6" Class="ml-2">
+            <MudIcon Icon="@Icons.Material.Filled.Casino" Size="Size.Small" Class="mr-1" />
             RifaTech
         </MudText>
-        
+
         <MudSpacer />
-        
+
         @if (_isAuthenticated)
         {
-            <MudTooltip Text="Notificações" Placement="Placement.Bottom">
-                <MudBadge Color="Color.Error" Content="@_notificationCount" Overlap>
-                    <MudIconButton Icon="@Icons.Material.Filled.Notifications" 
-                                 Color="Color.Inherit"
-                                 OnClick="OpenNotifications" />
+            <MudTooltip Text="Notificações">
+                <MudBadge Color="Color.Error" Content="@_notificationCount" Size="Size.Small" Overlap>
+                    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                                   Size="Size.Small"
+                                   Color="Color.Inherit"
+                                   OnClick="OpenNotifications" />
                 </MudBadge>
             </MudTooltip>
         }
-        
-        <MudTooltip Text="@(_isDarkMode ? "Modo Claro" : "Modo Escuro")" 
-                  Placement="Placement.Bottom">
-            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)" 
-                         Color="Color.Inherit" 
-                         OnClick="@ToggleTheme" />
+
+        <MudTooltip Text="@(_isDarkMode ? "Modo Claro" : "Modo Escuro")">
+            <MudIconButton Icon="@(_isDarkMode? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           Size="Size.Small"
+                           Color="Color.Inherit"
+                           OnClick="@ToggleTheme" />
         </MudTooltip>
-        
+
         @if (_isAuthenticated)
         {
-            <MudMenu Direction="Direction.Bottom" OffsetY="true">
+            <MudMenu Direction="Direction.Bottom" OffsetY="true" Dense="true">
                 <ActivatorContent>
-                    <MudAvatar Color="Color.Secondary" Class="ml-3">@_userInitials</MudAvatar>
+                    <MudAvatar Color="Color.Secondary" Size="Size.Small" Class="ml-2">@_userInitials</MudAvatar>
                 </ActivatorContent>
                 <ChildContent>
-                    <MudList T="string">
-                        <MudListItem T="string">
-                            <MudText><b>Valor:</b> @Amount.ToString("C")</MudText>
-                        </MudListItem>
-                        <MudListItem T="string">
-                            <MudText><b>ID do Pagamento:</b> @Payment.Id</MudText>
-                        </MudListItem>
-                        <MudListItem T="string">
-                            <MudText><b>Válido até:</b> @(Payment.ExpirationTime?.ToString("dd/MM/yyyy HH:mm") ?? "-")</MudText>
-                        </MudListItem>
-                    </MudList>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Person">Perfil</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Settings">Configurações</MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Sair</MudMenuItem>
                 </ChildContent>
             </MudMenu>
         }
         else
         {
-            <MudButton Variant="Variant.Filled"
-                      Color="Color.Secondary"
-                      OnClick="@(() => Navigation.NavigateTo("/login"))">
+            <MudButton Variant="Variant.Text"
+                       Size="Size.Small"
+                       Color="Color.Inherit"
+                       StartIcon="@Icons.Material.Filled.Login"
+                       OnClick="@(() => Navigation.NavigateTo("/login"))">
                 Entrar
             </MudButton>
         }
     </MudAppBar>
-    
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
+
+    <MudDrawer @bind-Open="_drawerOpen"
+               ClipMode="DrawerClipMode.Always"
+               Elevation="1"
+               Variant="@DrawerVariant.Mini"
+               OpenMiniOnHover="true"
+               @bind-MiniDrawer="_miniDrawer">
         <MudDrawerHeader>
-            <MudText Typo="Typo.h6">RifaTech</MudText>
-            <MudText Typo="Typo.body2">Sistema de Rifas Online</MudText>
+            <MudText Typo="Typo.subtitle1" Class="mt-1">RifaTech</MudText>
         </MudDrawerHeader>
-        <NavMenu IsAdmin="_isAdmin" />
+        <NavMenu IsAdmin="@_isAdmin" />
     </MudDrawer>
 
     <MudMainContent>
@@ -93,35 +92,30 @@
 
 @code {
     private bool _drawerOpen = true;
+    private bool _miniDrawer = true;
     private bool _isDarkMode = false;
     private bool _isAuthenticated = false;
     private bool _isAdmin = false;
     private int _notificationCount = 0;
     private string _userInitials = "U";
     private MudTheme _currentTheme = new MudTheme();
-    [Parameter] public PaymentDTO Payment { get; set; } = new PaymentDTO();
-    [Parameter] public decimal Amount { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
-        // Verificar tema salvo
-        var savedTheme = await LocalStorage.GetItemAsync<string>("theme");
-        if (savedTheme == "dark")
-        {
-            _isDarkMode = true;
-            ApplyTheme();
-        }
-        
-        // Verificar autenticação
+        SetupTheme();
+        await CheckAuthenticationState();
+    }
+
+    private async Task CheckAuthenticationState()
+    {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        _isAuthenticated = authState.User.Identity.IsAuthenticated;
-        
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
         if (_isAuthenticated)
         {
             _isAdmin = authState.User.IsInRole("Admin");
-            var name = authState.User.FindFirst(ClaimTypes.Name)?.Value ?? "";
-            _userInitials = string.Join("", name.Split(' ').Select(n => n[0]));
-            
-            // Carregar notificações
+            var name = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+            _userInitials = string.IsNullOrEmpty(name) ? "U" : string.Join("", name.Split(' ').Take(2).Select(n => n.Length > 0 ? n[0].ToString() : ""));
             await LoadNotifications();
         }
     }
@@ -131,31 +125,33 @@
         _drawerOpen = !_drawerOpen;
     }
 
-    private async Task ToggleTheme()
+    private void ToggleTheme()
     {
         _isDarkMode = !_isDarkMode;
-        ApplyTheme();
-        await LocalStorage.SetItemAsync("theme", _isDarkMode ? "dark" : "light");
+        SetupTheme();
     }
-    
-    private void ApplyTheme()
+
+    private void SetupTheme()
     {
         if (_isDarkMode)
         {
             _currentTheme = new MudTheme
             {
-                PaletteLight = new PaletteLight
+                PaletteDark = new PaletteDark
                 {
-                    Primary = "#1E88E5",
-                    Secondary = "#FF4081",
-                    AppbarBackground = "#1E88E5",
+                    Primary = "#90CAF9",
+                    Secondary = "#F48FB1",
+                    AppbarBackground = "#1A1A27",
                     Background = "#121212",
-                    DrawerBackground = "#1F1F1F",
-                    TextPrimary = "rgba(255,255,255, 0.87)",
-                    TextSecondary = "rgba(255,255,255, 0.60)",
-                    DrawerText = "rgba(255,255,255, 0.87)",
                     Surface = "#1E1E1E",
-                    Success = "#4caf50"
+                    DrawerBackground = "#1A1A27",
+                    DrawerText = "rgba(255,255,255,0.87)",
+                    TextPrimary = "rgba(255,255,255,0.87)"
+                },
+                LayoutProperties = new LayoutProperties
+                {
+                    DrawerWidthLeft = "240px",
+                    DrawerMiniWidthLeft = "56px"
                 }
             };
         }
@@ -170,41 +166,33 @@
                     AppbarBackground = "#1E88E5",
                     Background = "#F5F5F5",
                     Surface = "#FFFFFF",
-                    Success = "#4caf50"
+                    DrawerBackground = "#FFFFFF",
+                    DrawerText = "rgba(0,0,0,0.87)",
+                    TextPrimary = "rgba(0,0,0,0.87)"
+                },
+                LayoutProperties = new LayoutProperties
+                {
+                    DrawerWidthLeft = "240px",
+                    DrawerMiniWidthLeft = "56px"
                 }
             };
         }
     }
 
-    
     private async Task LoadNotifications()
     {
-        // Exemplo: Carregar notificações da API
-        try {
-            _notificationCount = 3; // Substituir por chamada API
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add("Erro ao carregar notificações", Severity.Error);
-        }
+        // Simulação de carregamento de notificações
+        _notificationCount = 3;
     }
-    
+
     private void OpenNotifications()
     {
         Navigation.NavigateTo("/notificacoes");
     }
-    
+
     private async Task Logout()
     {
-        await LocalStorage.RemoveItemAsync("authToken");
-        await LocalStorage.RemoveItemAsync("refreshToken");
-        
-        // Notificar o provedor de autenticação
-        if (AuthStateProvider is CustomAuthStateProvider authProvider)
-        {
-            await authProvider.LogoutAsync();
-        }
-        
+        // Lógica de logout
         Snackbar.Add("Logout realizado com sucesso", Severity.Success);
         Navigation.NavigateTo("/");
     }

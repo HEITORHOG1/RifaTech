@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Controls.Hosting;
 using Microsoft.Maui.Hosting;
+using MudBlazor;
 using MudBlazor.Services;
 using RifaTech.UI.Shared.Services;
 using System.Text.Json;
@@ -32,14 +33,24 @@ namespace RifaTech.UI
 
             builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
             // Registrar MudBlazor
-            builder.Services.AddMudServices();
 
+            // Register MudBlazor services
+            builder.Services.AddMudServices(config =>
+            {
+                config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+                config.SnackbarConfiguration.PreventDuplicates = false;
+                config.SnackbarConfiguration.NewestOnTop = true;
+                config.SnackbarConfiguration.ShowCloseIcon = true;
+                config.SnackbarConfiguration.VisibleStateDuration = 5000;
+                config.SnackbarConfiguration.HideTransitionDuration = 500;
+                config.SnackbarConfiguration.ShowTransitionDuration = 500;
+            });
             // Configurar HttpClient
             builder.Services.AddScoped(sp =>
             {
                 var httpClient = new HttpClient
                 {
-                    BaseAddress = new Uri("http://rifatech-api.azurewebsites.net") // API pública
+                    BaseAddress = new Uri("https://localhost:7212/") // API pública
                 };
 
                 // Configurar serialização JSON para evitar problemas com referências circulares
