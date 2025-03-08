@@ -26,7 +26,7 @@ else
         <MudGrid>
             <MudItem xs="12" md="6">
                 <MudImage Src="@(string.IsNullOrEmpty(_rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{_rifa.Base64Img}")"
-                         Width="100%" Height="200px" ObjectFit="ObjectFit.Cover"
+                         Width="100" Height="200" ObjectFit="ObjectFit.Cover"
                          Elevation="2" Class="rounded-lg" />
             </MudItem>
             
@@ -239,7 +239,7 @@ else
     private string _paymentMethod = "pix";
     
     private ClienteDTO _cliente = new();
-    
+    private LoginDTO _loginModel = new LoginDTO();
     protected override async Task OnInitializedAsync()
     {
         await LoadRifa();
@@ -321,10 +321,10 @@ else
             // Criar pagamento PIX
             var pixRequest = new PixPaymentRequest
             {
-                RifaId = _rifa,
+                RifaId = _rifa.Id,  // Use the ID property, not the entire object
                 Quantidade = _quantidade,
                 ValorTotal = _quantidade * (decimal)_rifa.TicketPrice,
-                ClienteId = _cliente
+                ClienteId = _cliente.Id  // Use the ID property, not the entire object
             };
             
             var paymentResponse = await Http.PostAsJsonAsync("api/payments/pix", pixRequest);

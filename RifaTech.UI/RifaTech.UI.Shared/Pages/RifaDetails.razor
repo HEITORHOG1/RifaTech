@@ -24,7 +24,7 @@ else
         <MudItem xs="12" md="6">
             <MudPaper Class="pa-4 mud-height-full">
                 <MudImage Src="@(string.IsNullOrEmpty(_rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{_rifa.Base64Img}")"
-                          Width="100 %" Height="400px" ObjectFit="ObjectFit.Cover" ObjectPosition="ObjectPosition.Center"
+                          Width="100" Height="400" ObjectFit="ObjectFit.Cover" ObjectPosition="ObjectPosition.Center"
                           Elevation="3" Class="rounded-lg" />
             </MudPaper>
         </MudItem>
@@ -137,7 +137,7 @@ else
             <RowTemplate>
                 <MudTd DataLabel="Número">@context.Number</MudTd>
                 <MudTd DataLabel="Cliente">@GetClienteInitials(context.Cliente?.Name)</MudTd>
-                <MudTd DataLabel="Data">@context.CreatedAt.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                <MudTd DataLabel="Data">@(context.CreatedAt != null ? ((DateTime)context.CreatedAt).ToString("dd/MM/yyyy HH:mm") : "-")</MudTd>
             </RowTemplate>
         </MudTable>
     }
@@ -201,9 +201,18 @@ else
         var parts = name.Split(' ');
         if (parts.Length > 1)
         {
-            return $"{parts[0][0]}{parts[1][0]}";
+            // Check each part length before accessing index
+            if (parts[0].Length > 0 && parts[1].Length > 0)
+                return $"{parts[0][0]}{parts[1][0]}";
+            else if (parts[0].Length > 0)
+                return parts[0][0].ToString();
+            else if (parts[1].Length > 0)
+                return parts[1][0].ToString();
+            else
+                return "?";
         }
 
+        // Check if the first part has any characters
         return parts[0].Length > 0 ? parts[0][0].ToString() : "?";
     }
 }

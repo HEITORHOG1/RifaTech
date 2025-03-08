@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
+@using RifaTech.DTOs.DTOs
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -51,16 +52,17 @@
                     <MudAvatar Color="Color.Secondary" Class="ml-3">@_userInitials</MudAvatar>
                 </ActivatorContent>
                 <ChildContent>
-                    <MudListItem Icon="@Icons.Material.Filled.Person" 
-                               Href="/perfil" 
-                               Text="Perfil" />
-                    <MudListItem Icon="@Icons.Material.Filled.Settings" 
-                               Href="/configuracoes" 
-                               Text="Configurações" />
-                    <MudDivider Class="my-2" />
-                    <MudListItem Icon="@Icons.Material.Filled.Logout" 
-                               Text="Sair" 
-                               OnClick="Logout" />
+                    <MudList T="string">
+                        <MudListItem T="string">
+                            <MudText><b>Valor:</b> @Amount.ToString("C")</MudText>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <MudText><b>ID do Pagamento:</b> @Payment.Id</MudText>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <MudText><b>Válido até:</b> @(Payment.ExpirationTime?.ToString("dd/MM/yyyy HH:mm") ?? "-")</MudText>
+                        </MudListItem>
+                    </MudList>
                 </ChildContent>
             </MudMenu>
         }
@@ -97,7 +99,8 @@
     private int _notificationCount = 0;
     private string _userInitials = "U";
     private MudTheme _currentTheme = new MudTheme();
-
+    [Parameter] public PaymentDTO Payment { get; set; } = new PaymentDTO();
+    [Parameter] public decimal Amount { get; set; }
     protected override async Task OnInitializedAsync()
     {
         // Verificar tema salvo

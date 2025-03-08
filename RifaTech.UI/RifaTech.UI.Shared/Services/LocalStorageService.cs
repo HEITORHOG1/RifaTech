@@ -19,8 +19,17 @@ namespace RifaTech.UI.Shared.Services
 
         public async Task<T> GetItemAsync<T>(string key)
         {
-            return await _localStorage.GetItemAsync<T>(key);
+            try
+            {
+                return await _localStorage.GetItemAsync<T>(key);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+            {
+                return default;
+            }
         }
+
+        // Do the same for all other methods that call JavaScript functions
 
         public async Task SetItemAsync<T>(string key, T value)
         {

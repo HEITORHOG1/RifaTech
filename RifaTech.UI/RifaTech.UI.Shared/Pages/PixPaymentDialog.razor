@@ -41,21 +41,21 @@
                </MudItem>
                
                <MudItem xs="12" Class="mt-4">
-                   <MudExpansionPanels>
-                       <MudExpansionPanel Text="Detalhes da Compra">
-                           <MudList>
-                               <MudListItem>
-                                   <MudText><b>Valor:</b> @Amount.ToString("C")</MudText>
-                               </MudListItem>
-                               <MudListItem>
-                                   <MudText><b>ID do Pagamento:</b> @Payment.Id</MudText>
-                               </MudListItem>
-                               <MudListItem>
-                                   <MudText><b>Válido até:</b> @Payment.ExpirationTime.ToString("dd/MM/yyyy HH:mm")</MudText>
-                               </MudListItem>
-                           </MudList>
-                       </MudExpansionPanel>
-                   </MudExpansionPanels>
+                    <MudExpansionPanels T="string">
+                        <MudExpansionPanel Text="Detalhes da Compra">
+                            <MudList T="string">
+                                <MudListItem T="string">
+                                    <MudText><b>Valor:</b> @Amount.ToString("C")</MudText>
+                                </MudListItem>
+                                <MudListItem T="string">
+                                    <MudText><b>ID do Pagamento:</b> @Payment.Id</MudText>
+                                </MudListItem>
+                                <MudListItem T="string">
+                                    <MudText><b>Válido até:</b> @(Payment.ExpirationTime?.ToString("dd/MM/yyyy HH:mm") ?? "-")</MudText>
+                                </MudListItem>
+                            </MudList>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
                </MudItem>
                
                <MudItem xs="12" Class="d-flex justify-center mt-4">
@@ -89,7 +89,8 @@
    [Parameter] public PaymentDTO Payment { get; set; }
    [Parameter] public Guid RifaId { get; set; }
    [Parameter] public decimal Amount { get; set; }
-   
+    private bool _isRendered = false;
+
    private bool _checkingStatus = false;
    private System.Threading.Timer _timer;
    
@@ -102,12 +103,25 @@
            TimeSpan.FromSeconds(10), 
            TimeSpan.FromSeconds(10));
    }
-   
-   private async Task CopyPixCode()
-   {
-       await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Payment.QrCode);
-       Snackbar.Add("Código PIX copiado!", Severity.Success);
-   }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+            // Initialize timer here
+            _timer = new System.Threading.Timer(
+                async _ => await CheckPaymentStatusAuto(),
+                null,
+                TimeSpan.FromSeconds(10),
+                TimeSpan.FromSeconds(10));
+        }
+    }
+    private async Task CopyPixCode()
+    {
+        if (!_isRendered) return;
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Payment.QrCode);
+        Snackbar.Add("Código PIX copiado!", Severity.Success);
+    }
    
    private async Task CheckPaymentStatus()
    {
