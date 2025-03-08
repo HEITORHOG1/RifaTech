@@ -1,5 +1,4 @@
-﻿using RifaTech.DTOs;
-using RifaTech.DTOs.Contracts;
+﻿using RifaTech.DTOs.Contracts;
 using RifaTech.DTOs.DTOs;
 
 namespace RifaTech.API.Services

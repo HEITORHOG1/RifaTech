@@ -1,5 +1,4 @@
-﻿using RifaTech.DTOs.Contracts;
-using RifaTech.DTOs.DTOs;
+﻿using RifaTech.DTOs.DTOs;
 using System.Net;
 using System.Net.Mail;
 

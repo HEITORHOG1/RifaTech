@@ -1,7 +1,4 @@
-﻿using RifaTech.DTOs;
-using RifaTech.DTOs.DTOs;
-using System.Net;
-using System.Net.Mail;
+﻿using RifaTech.DTOs.DTOs;
 
 namespace RifaTech.API.Services
 {
