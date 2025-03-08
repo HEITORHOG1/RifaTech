@@ -48,7 +48,7 @@ namespace RifaTech.UI
             {
                 var httpClient = new HttpClient
                 {
-                    BaseAddress = new Uri("https://localhost:7212/") // API pública
+                    BaseAddress = new Uri("https://localhost:7212/") // URL da API
                 };
 
                 // Configurar serialização JSON para evitar problemas com referências circulares

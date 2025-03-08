@@ -6,6 +6,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@using RifaTech.UI.Shared.Config;
 
 <PageTitle>RifaTech - Rifas Online</PageTitle>
 
@@ -429,7 +430,7 @@
             _loading = true;
 
             // Carrega todas as rifas
-            _rifas = await Http.GetFromJsonAsync<List<RifaDTO>>("api/rifas");
+            _rifas = await Http.GetFromJsonAsync<List<RifaDTO>>(AppConfig.Api.Endpoints.Rifas);
 
             // Separa as rifas em destaque (com maior porcentagem de vendas)
             _featuredRifas = _rifas
