@@ -14,6 +14,15 @@ namespace RifaTech.UI.Shared.Services
         {
             _localStorage = localStorage;
         }
+        public async Task<ClienteDTO> ObterClienteRecorrenteSeguroAsync(bool rendered)
+        {
+            if (!rendered)
+            {
+                return null; // Retorna null durante pré-renderização
+            }
+
+            return await ObterClienteRecorrenteAsync();
+        }
 
         /// <summary>
         /// Salva as informações do cliente no localStorage para uso em compras futuras

@@ -135,7 +135,41 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
     app.UseDeveloperExceptionPage();
-}
+
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // Criar role Admin se não existir
+        if (!await roleManager.RoleExistsAsync("Admin"))
+        {
+            await roleManager.CreateAsync(new IdentityRole("Admin"));
+        }
+
+        // Criar usuário admin se não existir
+        var adminUser = await userManager.FindByEmailAsync("admin@rifatech.com");
+        if (adminUser == null)
+        {
+            adminUser = new ApplicationUser
+            {
+                UserName = "admin@rifatech.com",
+                Email = "admin@rifatech.com",
+                Name = "Administrador",
+                CPF = "12345678900",
+                EhAdmin = true,
+                EmailConfirmed = true
+            };
+
+            var result = await userManager.CreateAsync(adminUser, "Admin@123");
+            if (result.Succeeded)
+            {
+                await userManager.AddToRoleAsync(adminUser, "Admin");
+            }
+        }
+    }
+    }
 else
 {
     app.UseExceptionHandler("/Error");

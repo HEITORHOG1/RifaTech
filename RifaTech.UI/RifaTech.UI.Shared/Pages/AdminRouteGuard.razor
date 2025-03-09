@@ -1,0 +1,79 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Microsoft.Extensions.Logging
+@using MudBlazor
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject ILogger<AdminRouteGuard> Logger
+
+<CascadingAuthenticationState>
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            @ChildContent
+        </Authorized>
+        <NotAuthorized>
+            @if (context.User.Identity?.IsAuthenticated == true)
+            {
+                <MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
+                    <MudPaper Elevation="3" Class="pa-4 text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.SecurityUpdateWarning"
+                                 Color="Color.Error"
+                                 Size="Size.Large"
+                                 Class="mb-4" />
+
+                        <MudText Typo="Typo.h5" Color="Color.Error" Class="mb-2">
+                            Acesso Negado
+                        </MudText>
+
+                        <MudText Class="mb-4">
+                            Você não possui permissões administrativas para acessar esta página.
+                        </MudText>
+
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   OnClick="@(() => Navigation.NavigateTo("/"))">
+                            Voltar para a Página Inicial
+                        </MudButton>
+                    </MudPaper>
+                </MudContainer>
+            }
+            else
+            {
+                <MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
+                    <MudPaper Elevation="3" Class="pa-4 text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Login"
+                                 Color="Color.Primary"
+                                 Size="Size.Large"
+                                 Class="mb-4" />
+
+                        <MudText Typo="Typo.h5" Class="mb-2">
+                            Login Necessário
+                        </MudText>
+
+                        <MudText Class="mb-4">
+                            Você precisa fazer login como administrador para acessar esta página.
+                        </MudText>
+
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   OnClick="@(() => Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(Navigation.Uri)}"))">
+                            Fazer Login
+                        </MudButton>
+                    </MudPaper>
+                </MudContainer>
+            }
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Logger.LogInformation("AdminRouteGuard inicializado");
+    }
+}

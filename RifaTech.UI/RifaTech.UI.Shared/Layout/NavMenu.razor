@@ -1,4 +1,11 @@
-﻿@* NavMenu.razor *@
+﻿@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.Extensions.Logging
+@using MudBlazor
+
+@* NavMenu.razor *@
+@inject ILogger<NavMenu> Logger
+@inject NavigationManager Navigation
+
 <MudNavMenu Rounded="true" Margin="Margin.Normal" Class="mt-2" Dense="true">
     <MudNavLink Href="/"
                 Icon="@Icons.Material.Outlined.Home"
@@ -32,14 +39,17 @@
             Minhas Rifas
         </MudNavLink>
 
-        <MudNavLink Href="/rifas/criar"
-                    Icon="@Icons.Material.Outlined.Add"
-                    IconSize="Size.Small"
-                    IconColor="Color.Inherit"
-                    Match="NavLinkMatch.Prefix"
-                    Class="ml-4">
-            Criar Rifa
-        </MudNavLink>
+        @if (IsAdmin)
+        {
+            <MudNavLink Href="/rifas/criar"
+                        Icon="@Icons.Material.Outlined.Add"
+                        IconSize="Size.Small"
+                        IconColor="Color.Inherit"
+                        Match="NavLinkMatch.Prefix"
+                        Class="ml-4">
+                Criar Rifa
+            </MudNavLink>
+        }
     </MudNavGroup>
 
     <MudNavGroup Title="Tickets"
@@ -72,7 +82,17 @@
                      Icon="@Icons.Material.Outlined.AdminPanelSettings"
                      IconColor="Color.Error"
                      IconSize="Size.Small"
-                     HideExpandIcon="false">
+                     HideExpandIcon="false"
+                     Class="admin-nav-group">
+            <MudNavLink Href="/admin/dashboard"
+                        Icon="@Icons.Material.Outlined.Dashboard"
+                        IconSize="Size.Small"
+                        IconColor="Color.Inherit"
+                        Match="NavLinkMatch.Prefix"
+                        Class="ml-4">
+                Dashboard
+            </MudNavLink>
+
             <MudNavLink Href="/admin/usuarios"
                         Icon="@Icons.Material.Outlined.People"
                         IconSize="Size.Small"
@@ -108,6 +128,15 @@
                         Class="ml-4">
                 Relatórios
             </MudNavLink>
+
+            <MudNavLink Href="/admin/config"
+                        Icon="@Icons.Material.Outlined.Settings"
+                        IconSize="Size.Small"
+                        IconColor="Color.Inherit"
+                        Match="NavLinkMatch.Prefix"
+                        Class="ml-4">
+                Configurações
+            </MudNavLink>
         </MudNavGroup>
     }
 
@@ -120,9 +149,38 @@
                 Match="NavLinkMatch.Prefix">
         Ajuda e Suporte
     </MudNavLink>
+
+    @if (IsAdmin)
+    {
+        <MudElement Class="pa-2 mt-4 rounded admin-badge">
+            <MudText Typo="Typo.caption" Align="Align.Center">
+                Modo Administrador Ativo
+            </MudText>
+        </MudElement>
+    }
 </MudNavMenu>
+
+<style>
+    .admin-nav-group {
+        border-left: 3px solid var(--mud-palette-error);
+        margin-left: -3px;
+    }
+
+    .admin-badge {
+        background-color: var(--mud-palette-error-lighten);
+        color: var(--mud-palette-error-darken);
+        margin: 8px 16px;
+        text-align: center;
+    }
+</style>
 
 @code {
     [Parameter]
     public bool IsAdmin { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        Logger.LogInformation($"NavMenu recebeu IsAdmin = {IsAdmin}");
+        base.OnParametersSet();
+    }
 }

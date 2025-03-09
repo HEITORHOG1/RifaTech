@@ -229,13 +229,21 @@ else
     private bool _termsAccepted = false;
     private bool _processando = false;
     private bool _clienteExistente = false;
-
+    private bool _isRendered = false;
     protected override async Task OnInitializedAsync()
     {
         await LoadRifa();
         await CarregarClienteRecorrente();
     }
-
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+            await CarregarClienteRecorrente();
+            StateHasChanged();
+        }
+    }
     private async Task LoadRifa()
     {
         try

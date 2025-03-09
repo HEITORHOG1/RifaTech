@@ -1,18 +1,23 @@
 ﻿@* MainLayout.razor *@
 @inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Logging
 @using MudBlazor
+@using RifaTech.UI.Shared.Services
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+@inject ILocalStorageService LocalStorage
+
+@inject ILogger<MainLayout> Logger
 
 <MudThemeProvider Theme="@_currentTheme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
-<MudPopoverProvider /> <!-- Adicione esta linha -->
+<MudPopoverProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="1" Color="Color.Primary" Dense="true">
+    <MudAppBar Elevation="1" Color="@(_isAdmin ? Color.Error : Color.Primary)" Dense="true">
         <MudIconButton Icon="@Icons.Material.Filled.Menu"
                        Color="Color.Inherit"
                        Edge="Edge.Start"
@@ -21,7 +26,7 @@
 
         <MudText Typo="Typo.h6" Class="ml-2">
             <MudIcon Icon="@Icons.Material.Filled.Casino" Size="Size.Small" Class="mr-1" />
-            RifaTech
+            RifaTech @(_isAdmin ? "(Área Administrativa)" : "")
         </MudText>
 
         <MudSpacer />
@@ -49,11 +54,24 @@
         {
             <MudMenu Direction="Direction.Bottom" OffsetY="true" Dense="true">
                 <ActivatorContent>
-                    <MudAvatar Color="Color.Secondary" Size="Size.Small" Class="ml-2">@_userInitials</MudAvatar>
+                    <MudAvatar Color="@(_isAdmin ? Color.Error : Color.Secondary)" Size="Size.Small" Class="ml-2">@_userInitials</MudAvatar>
                 </ActivatorContent>
                 <ChildContent>
-                    <MudMenuItem Icon="@Icons.Material.Filled.Person">Perfil</MudMenuItem>
-                    <MudMenuItem Icon="@Icons.Material.Filled.Settings">Configurações</MudMenuItem>
+                    <MudText Typo="Typo.caption" Class="px-4 py-2">
+                        <b>@_userName</b>
+                        @if (_isAdmin)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Class="ml-2">Admin</MudChip>
+
+                        }
+                    </MudText>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Person" OnClick="@(() => Navigation.NavigateTo("/perfil"))">Perfil</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Settings" OnClick="@(() => Navigation.NavigateTo("/configuracoes"))">Configurações</MudMenuItem>
+                    @if (_isAdmin)
+                    {
+                        <MudMenuItem Icon="@Icons.Material.Filled.Dashboard" OnClick="@(() => Navigation.NavigateTo("/admin/dashboard"))">Painel Admin</MudMenuItem>
+                    }
                     <MudDivider />
                     <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Sair</MudMenuItem>
                 </ChildContent>
@@ -98,25 +116,91 @@
     private bool _isAdmin = false;
     private int _notificationCount = 0;
     private string _userInitials = "U";
+    private string _userName = "Usuário";
     private MudTheme _currentTheme = new MudTheme();
 
     protected override async Task OnInitializedAsync()
     {
         SetupTheme();
+
+        // Carregar preferência de tema do localStorage
+        var savedTheme = await LocalStorage.GetItemAsync<string>("themeMode");
+        if (!string.IsNullOrEmpty(savedTheme) && savedTheme == "dark")
+        {
+            _isDarkMode = true;
+            SetupTheme();
+        }
+
         await CheckAuthenticationState();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Podemos fazer verificações adicionais após a renderização
+            if (_isAuthenticated && _isAdmin)
+            {
+                Logger.LogInformation("Layout renderizado para usuário administrador");
+            }
+        }
+    }
     private async Task CheckAuthenticationState()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
-
-        if (_isAuthenticated)
+        try
         {
-            _isAdmin = authState.User.IsInRole("Admin");
-            var name = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
-            _userInitials = string.IsNullOrEmpty(name) ? "U" : string.Join("", name.Split(' ').Take(2).Select(n => n.Length > 0 ? n[0].ToString() : ""));
-            await LoadNotifications();
+            Logger.LogInformation("Verificando estado de autenticação no layout");
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+            if (_isAuthenticated)
+            {
+                // Verifica se é admin pela claim de role
+                _isAdmin = authState.User.IsInRole("Admin");
+                Logger.LogInformation($"Usuário autenticado. IsAdmin por claim: {_isAdmin}");
+
+                // Backup: verifica também pelos dados salvos no localStorage
+                var savedIsAdmin = await LocalStorage.GetItemAsync<bool>("isAdmin");
+                if (!_isAdmin && savedIsAdmin)
+                {
+                    _isAdmin = true;
+                    Logger.LogInformation("IsAdmin atualizado pelo localStorage");
+                }
+
+                // Obter nome do usuário
+                var name = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
+                _userName = name;
+                _userInitials = string.IsNullOrEmpty(name) ? "U" : string.Join("", name.Split(' ').Take(2).Select(n => n.Length > 0 ? n[0].ToString() : ""));
+
+                // Tenta obter o email como fallback para o nome
+                if (string.IsNullOrEmpty(_userName))
+                {
+                    _userName = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "Usuário";
+                }
+
+                // Carregar notificações
+                await LoadNotifications();
+
+                Logger.LogInformation($"Layout configurado para usuário: {_userName}, IsAdmin: {_isAdmin}");
+            }
+            else
+            {
+                Logger.LogInformation("Usuário não autenticado");
+                _isAdmin = false;
+                _userName = "Usuário";
+                _userInitials = "U";
+            }
+
+            // Atualizar o tema após verificar o status de admin
+            SetupTheme();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao verificar estado de autenticação");
+            _isAuthenticated = false;
+            _isAdmin = false;
+            _userName = "Usuário";
+            _userInitials = "U";
         }
     }
 
