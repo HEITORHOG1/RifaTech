@@ -7,51 +7,38 @@ namespace RifaTech.UI.Shared.Services
 {
     public class ClienteRecorrenteService
     {
-        private readonly ILocalStorageService _localStorage;
+        private readonly IStorageService _localStorage;
         private const string CLIENT_STORAGE_KEY = "cliente_info";
+        private bool _isRendered = false;
 
-        public ClienteRecorrenteService(ILocalStorageService localStorage)
+        public ClienteRecorrenteService(IStorageService localStorage)
         {
             _localStorage = localStorage;
         }
-        public async Task<ClienteDTO> ObterClienteRecorrenteSeguroAsync(bool rendered)
-        {
-            if (!rendered)
-            {
-                return null; // Retorna null durante pré-renderização
-            }
-
-            return await ObterClienteRecorrenteAsync();
-        }
 
         /// <summary>
-        /// Salva as informações do cliente no localStorage para uso em compras futuras
+        /// Notifica o serviço que a renderização foi concluída e é seguro acessar o localStorage
         /// </summary>
-        public async Task SalvarClienteRecorrenteAsync(ClienteDTO cliente)
+        public void SetRendered()
         {
-            try
-            {
-                if (cliente != null && !string.IsNullOrEmpty(cliente.Email))
-                {
-                    await _localStorage.SetItemAsync(CLIENT_STORAGE_KEY, cliente);
-                }
-            }
-            catch (Exception)
-            {
-                // Silenciar exceções relacionadas ao localStorage
-            }
+            _isRendered = true;
         }
 
         /// <summary>
-        /// Recupera as informações do último cliente que fez compra
+        /// Recupera as informações do último cliente que fez compra, com verificação de pré-renderização
         /// </summary>
         public async Task<ClienteDTO> ObterClienteRecorrenteAsync()
         {
+            if (!_isRendered)
+            {
+                // Durante a pré-renderização, retorna null para evitar erros de JS interop
+                return null;
+            }
+
             try
             {
-                // Verificar primeiro se o item existe
-                var clienteInfo = await _localStorage.GetItemAsync<ClienteDTO>(CLIENT_STORAGE_KEY);
-                return clienteInfo;
+                // LocalStorageService já tem proteção contra pré-renderização
+                return await _localStorage.GetItemAsync<ClienteDTO>(CLIENT_STORAGE_KEY);
             }
             catch (Exception)
             {
@@ -61,14 +48,37 @@ namespace RifaTech.UI.Shared.Services
         }
 
         /// <summary>
+        /// Salva as informações do cliente no localStorage para uso em compras futuras
+        /// </summary>
+        public async Task SalvarClienteRecorrenteAsync(ClienteDTO cliente)
+        {
+            if (!_isRendered || cliente == null || string.IsNullOrEmpty(cliente.Email))
+            {
+                return;
+            }
+
+            try
+            {
+                await _localStorage.SetItemAsync(CLIENT_STORAGE_KEY, cliente);
+            }
+            catch (Exception)
+            {
+                // Silenciar exceções relacionadas ao localStorage
+            }
+        }
+
+        /// <summary>
         /// Verifica se há um cliente recorrente salvo
         /// </summary>
         public async Task<bool> ExisteClienteRecorrenteAsync()
         {
+            if (!_isRendered)
+            {
+                return false;
+            }
+
             try
             {
-                // Como não temos o método ContainKeyAsync, vamos tentar obter o item
-                // e verificar se é nulo.
                 var clienteInfo = await _localStorage.GetItemAsync<ClienteDTO>(CLIENT_STORAGE_KEY);
                 return clienteInfo != null;
             }
@@ -83,6 +93,11 @@ namespace RifaTech.UI.Shared.Services
         /// </summary>
         public async Task LimparClienteRecorrenteAsync()
         {
+            if (!_isRendered)
+            {
+                return;
+            }
+
             try
             {
                 await _localStorage.RemoveItemAsync(CLIENT_STORAGE_KEY);

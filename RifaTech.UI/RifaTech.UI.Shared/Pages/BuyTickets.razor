@@ -7,6 +7,7 @@
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
 
 <PageTitle>Comprar Tickets - RifaTech</PageTitle>
 
@@ -26,10 +27,10 @@ else
         <MudGrid>
             <MudItem xs="12" md="6">
                 <MudImage Src="@(string.IsNullOrEmpty(_rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{_rifa.Base64Img}")"
-                         Width="100" Height="200" ObjectFit="ObjectFit.Cover"
-                         Elevation="2" Class="rounded-lg" />
+                          Width="100" Height="200" ObjectFit="ObjectFit.Cover"
+                          Elevation="2" Class="rounded-lg" />
             </MudItem>
-            
+
             <MudItem xs="12" md="6">
                 <MudText Typo="Typo.h5">@_rifa.Name</MudText>
                 <MudText Typo="Typo.body2" Class="mb-2">@_rifa.Description</MudText>
@@ -56,8 +57,8 @@ else
     </MudPaper>
     
     <MudText Typo="Typo.h5" Class="mb-4">Formulário de Compra</MudText>
-    
-    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @bind-ActivePanelIndex="_activeIndex">
         <MudTabPanel Text="1. Quantidade" Icon="@Icons.Material.Filled.Numbers">
             <MudText Typo="Typo.h6" Class="mb-4">Selecione a quantidade de tickets</MudText>
 
@@ -110,7 +111,7 @@ else
                 </MudButton>
             </div>
         </MudTabPanel>
-        
+
         <MudTabPanel Text="2. Dados" Icon="@Icons.Material.Filled.Person">
             <MudText Typo="Typo.h6" Class="mb-4">Informações de Contato</MudText>
             
@@ -229,7 +230,7 @@ else
 @code {
     [Parameter]
     public Guid Id { get; set; }
-    
+
     private RifaDTO _rifa;
     private int _quantidade = 1;
     private int _activeIndex = 0;
@@ -237,21 +238,45 @@ else
     private bool _termsAccepted = false;
     private bool _processando = false;
     private string _paymentMethod = "pix";
-    
+    private bool _isRendered = false;
+    private CancellationTokenSource _cts;
+
     private ClienteDTO _cliente = new();
     private LoginDTO _loginModel = new LoginDTO();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadRifa();
-        await LoadUserData();
+        // Não carregar dados do usuário aqui para evitar problemas com JS interop
     }
-    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+            // Agora é seguro carregar dados do usuário
+            await LoadUserData();
+        }
+    }
     private async Task LoadRifa()
     {
         try
         {
             _loading = true;
-            _rifa = await Http.GetFromJsonAsync<RifaDTO>($"api/rifas/{Id}");
+
+            // Cancelar qualquer carregamento anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            // Adicionar timeout para evitar esperas muito longas
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+            _rifa = await Http.GetFromJsonAsync<RifaDTO>($"api/rifas/{Id}", linkedCts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            Snackbar.Add("A requisição foi cancelada. Tente novamente.", Severity.Warning);
         }
         catch (Exception ex)
         {
@@ -265,59 +290,106 @@ else
     
     private async Task LoadUserData()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        if (authState.User.Identity.IsAuthenticated)
+        if (!_isRendered) return;
+
+        try
         {
-            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity.IsAuthenticated)
             {
-                try
+                var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    var userInfo = await Http.GetFromJsonAsync<UserInfoDTO>($"api/manage/info");
-                    if (userInfo != null)
+                    try
                     {
-                        _cliente.Email = userInfo.Email;
-                        _cliente.Name = userInfo.Name;
+                        // Cancelar qualquer carregamento anterior
+                        _cts?.Cancel();
+                        _cts = new CancellationTokenSource();
+
+                        // Adicionar timeout para evitar esperas muito longas
+                        var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+                        var userInfo = await Http.GetFromJsonAsync<UserInfoDTO>($"api/manage/info", linkedCts.Token);
+                        if (userInfo != null)
+                        {
+                            _cliente.Email = userInfo.Email;
+                            _cliente.Name = userInfo.Name;
+                            StateHasChanged();
+                        }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Ignorar cancelamento, não é crítico
+                    }
+                    catch (Exception)
+                    {
+                        // Ignorar erro se não conseguir carregar dados do usuário
                     }
                 }
-                catch (Exception) { /* Ignora erro se não conseguir carregar dados do usuário */ }
             }
+        }
+        catch (Exception)
+        {
+            // Ignorar erros gerais ao carregar dados do usuário
         }
     }
     
     private async Task FinalizarCompra()
     {
+        if (!_isRendered) return;
+
         if (!_termsAccepted)
         {
             Snackbar.Add("Você precisa aceitar os termos e condições para continuar.", Severity.Warning);
             return;
         }
-        
+
         _processando = true;
-        
+        StateHasChanged();
+
         try
         {
+            // Cancelar qualquer operação anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            // Adicionar timeout para evitar esperas muito longas
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // Operação de compra pode demorar mais
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
             // Verificar se cliente já existe pelo email, telefone ou CPF
-            var existingCliente = await Http.GetFromJsonAsync<ClienteDTO>($"api/clientes/{_cliente.Email}/{_cliente.PhoneNumber}/{_cliente.CPF}");
-            
+            ClienteDTO existingCliente = null;
+            try
+            {
+                existingCliente = await Http.GetFromJsonAsync<ClienteDTO>(
+                    $"api/clientes/{Uri.EscapeDataString(_cliente.Email)}/{Uri.EscapeDataString(_cliente.PhoneNumber)}/{Uri.EscapeDataString(_cliente.CPF)}",
+                    linkedCts.Token);
+            }
+            catch (Exception)
+            {
+                // Se não encontrar o cliente, continuamos com null
+            }
+
             if (existingCliente == null)
             {
                 // Criar novo cliente
-                var response = await Http.PostAsJsonAsync("api/clientes", _cliente);
+                var response = await Http.PostAsJsonAsync("api/clientes", _cliente, linkedCts.Token);
                 if (response.IsSuccessStatusCode)
                 {
-                    _cliente = await response.Content.ReadFromJsonAsync<ClienteDTO>();
+                    _cliente = await response.Content.ReadFromJsonAsync<ClienteDTO>(cancellationToken: linkedCts.Token);
                 }
                 else
                 {
-                    throw new Exception("Erro ao cadastrar cliente.");
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    throw new Exception($"Erro ao cadastrar cliente: {response.StatusCode}. {errorContent}");
                 }
             }
             else
             {
                 _cliente = existingCliente;
             }
-            
+
             // Criar pagamento PIX
             var pixRequest = new PixPaymentRequest
             {
@@ -326,13 +398,13 @@ else
                 ValorTotal = _quantidade * (decimal)_rifa.TicketPrice,
                 ClienteId = _cliente.Id  // Use the ID property, not the entire object
             };
-            
-            var paymentResponse = await Http.PostAsJsonAsync("api/payments/pix", pixRequest);
-            
+
+            var paymentResponse = await Http.PostAsJsonAsync("api/payments/pix", pixRequest, linkedCts.Token);
+
             if (paymentResponse.IsSuccessStatusCode)
             {
-                var payment = await paymentResponse.Content.ReadFromJsonAsync<PaymentDTO>();
-                
+                var payment = await paymentResponse.Content.ReadFromJsonAsync<PaymentDTO>(cancellationToken: linkedCts.Token);
+
                 // Mostrar diálogo com QR Code para pagamento
                 var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium };
                 var parameters = new DialogParameters
@@ -341,13 +413,18 @@ else
                     { "RifaId", Id },
                     { "Amount", _quantidade * (decimal)_rifa.TicketPrice }
                 };
-                
+
                 await DialogService.ShowAsync<PixPaymentDialog>("Pagamento PIX", parameters, options);
             }
             else
             {
-                throw new Exception("Erro ao gerar pagamento PIX.");
+                var errorContent = await paymentResponse.Content.ReadAsStringAsync();
+                throw new Exception($"Erro ao gerar pagamento PIX: {paymentResponse.StatusCode}. {errorContent}");
             }
+        }
+        catch (TaskCanceledException)
+        {
+            Snackbar.Add("A operação foi cancelada. Tente novamente.", Severity.Warning);
         }
         catch (Exception ex)
         {
@@ -356,6 +433,15 @@ else
         finally
         {
             _processando = false;
+            StateHasChanged();
         }
     }
+
+    // Implementar IDisposable para cancelar operações pendentes
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}
 }

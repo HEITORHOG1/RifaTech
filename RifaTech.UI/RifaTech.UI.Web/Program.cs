@@ -7,7 +7,6 @@ using RifaTech.UI.Shared.Services;
 using RifaTech.UI.Web.Components;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ILocalStorageService = RifaTech.UI.Shared.Services.ILocalStorageService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,7 +15,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-// Registrar Local Storage
+// Registrar Local Storage (remover duplicata)
 builder.Services.AddBlazoredLocalStorage();
 
 // Configurar HttpClient usando AppConfig
@@ -25,16 +24,12 @@ builder.Services.AddScoped(sp =>
     // Obter a URL base da configuração
     var apiUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? AppConfig.Api.BaseUrl;
 
+    // Log para depuração
+    Console.WriteLine($"Configurando HttpClient com BaseAddress: {apiUrl}");
+
     var httpClient = new HttpClient
     {
         BaseAddress = new Uri(apiUrl)
-    };
-
-    // Configurar serialização JSON para evitar problemas com referências circulares
-    var options = new JsonSerializerOptions
-    {
-        ReferenceHandler = ReferenceHandler.Preserve,
-        PropertyNameCaseInsensitive = true
     };
 
     return httpClient;
@@ -54,10 +49,14 @@ builder.Services.AddMudServices(config =>
 
 // Configurar Autenticação
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
-builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 builder.Services.AddAuthorizationCore();
-builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
+
+// Registrar os serviços de forma correta (evitar duplicatas)
+
 builder.Services.AddScoped<ClienteRecorrenteService>();
+builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddScoped<IStorageService, BrowserStorageService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

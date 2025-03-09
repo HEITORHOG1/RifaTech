@@ -10,6 +10,9 @@
 @using RifaTech.UI.Shared.Config;
 @using RifaTech.UI.Shared.Helpers
 @using System.Text.Json
+@implements IDisposable
+
+<PageTitle>RifaTech - Rifas Online</PageTitle>
 
 <PageTitle>RifaTech - Rifas Online</PageTitle>
 
@@ -23,10 +26,10 @@
     {
         <MudPaper Elevation="0" Class="mb-8">
             <MudCarousel Class="mud-width-full featured-carousel" Style="height:400px;"
-            ShowArrows="true"
-            ShowDelimiters="true"
-            AutoCycle="true"
-            TData="RifaDTO">
+                         ShowArrows="true"
+                         ShowDelimiters="true"
+                         AutoCycle="true"
+                         TData="RifaDTO">
                 @foreach (var rifa in _featuredRifas.Take(5))
                 {
                     <MudCarouselItem Transition="Transition.Slide" Color="@Color.Primary">
@@ -421,180 +424,282 @@
     private List<RifaDTO> _upcomingRifas;
     private bool _loading = true;
     private LogHelper _logger;
+    private bool _isRendered = false;
+    private CancellationTokenSource _cts;
 
     protected override async Task OnInitializedAsync()
     {
-        // Inicializa o logger
-        _logger = new LogHelper(JSRuntime, "Home", true);
-        await _logger.LogAsync("Inicializando página Home", Helpers.LogLevel.Info);
-
-        // Inicializa o monitoramento de rede via JavaScript
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("setupNetworkMonitoring");
-            await _logger.LogAsync("Monitoramento de rede inicializado", LogLevel.Success);
-            // Monitora alterações no carrossel para detectar problemas
-            if (_featuredRifas?.Any() == true)
-            {
-                await JSRuntime.InvokeVoidAsync("monitorElementChanges", ".featured-carousel");
-                await JSRuntime.InvokeVoidAsync("setupNetworkMonitoring");
-
-                // Pré-carregamento de imagens
-                foreach (var rifa in _featuredRifas)
-                {
-                    await PreloadImage(GetRifaImage(rifa));
-                }
-            }
-            // Obtém informações do navegador para diagnóstico
-            var browserInfo = await JSRuntime.InvokeAsync<object>("getBrowserInfo");
-            await _logger.LogObjectAsync("Informações do navegador", browserInfo, LogLevel.Debug);
-        }
-        catch (Exception ex)
-        {
-            await _logger.LogExceptionAsync(ex, "Erro ao inicializar monitoramento");
-        }
-
-        await LoadRifas();
+        // Inicializa o estado, mas não realiza operações que podem causar erros de JS interop
+        _loading = true;
+        _rifas = new List<RifaDTO>();
+        _featuredRifas = new List<RifaDTO>();
+        _upcomingRifas = new List<RifaDTO>();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await _logger.LogAsync("Renderização inicial concluída", LogLevel.Info);
+            _isRendered = true;
 
+            // Inicializa o logger após a renderização
             try
             {
-                // Monitora alterações no carrossel para detectar problemas
-                if (_featuredRifas?.Any() == true)
-                {
-                    await JSRuntime.InvokeVoidAsync("monitorElementChanges", ".featured-carousel");
-                    await _logger.LogAsync("Monitoramento do carrossel ativado", LogLevel.Debug);
-                }
+                _logger = new LogHelper(JSRuntime, "Home", true);
+                await _logger.LogAsync("Inicializando página Home", Helpers.LogLevel.Info);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                await _logger.LogExceptionAsync(ex, "Erro ao configurar monitoramento de elementos");
+                // Se não conseguir inicializar o logger, continuamos mesmo assim
             }
+
+            // Agora é seguro inicializar o monitoramento e carregar os dados
+            try
+            {
+                await InitializeJsMonitoring();
+            }
+            catch (Exception)
+            {
+                // Se falhar o monitoramento, continuamos mesmo assim
+            }
+
+            // Carregamos os dados após a renderização para evitar erros de JS interop
+            await LoadRifas();
         }
     }
+    private async Task InitializeJsMonitoring()
+    {
+        if (!_isRendered) return;
 
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("setupNetworkMonitoring");
+            if (_logger != null)
+            {
+                await _logger.LogAsync("Monitoramento de rede inicializado", LogLevel.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Se o logger estiver disponível, registra o erro
+            if (_logger != null)
+            {
+                await _logger.LogExceptionAsync(ex, "Erro ao inicializar monitoramento");
+            }
+            // Mesmo com erro, continuamos a execução
+        }
+    }
     private async Task LoadRifas()
     {
         try
         {
-            _loading = true;
+            // Cancelamos qualquer carregamento anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
 
-            // Log de início do carregamento
-            await _logger.LogAsync("Iniciando carregamento de rifas", LogLevel.Info);
+            _loading = true;
+            StateHasChanged(); // Atualizar UI para mostrar loading
+
+            // Log de início do carregamento (seguro agora que estamos após renderização)
+            if (_logger != null)
+            {
+                await _logger.LogAsync("Iniciando carregamento de rifas", LogLevel.Info);
+            }
 
             // Carrega todas as rifas com tratamento de erro mais robusto
-            await using (await _logger.TimeOperationAsync("CarregarTodasRifas"))
+            try
             {
-                try
+                if (_logger != null)
                 {
                     await _logger.LogAsync($"Chamando API: {AppConfig.Api.Endpoints.Rifas}", LogLevel.Debug);
-                    var response = await Http.GetAsync(AppConfig.Api.Endpoints.Rifas);
-
-                    // Verifica se a requisição foi bem-sucedida
-                    if (response.IsSuccessStatusCode)
-                    {
-                        _rifas = await response.Content.ReadFromJsonAsync<List<RifaDTO>>();
-                        await _logger.LogAsync($"API respondeu com sucesso - Recebidas {_rifas?.Count ?? 0} rifas", LogLevel.Success);
-
-                        if (_rifas?.Count > 0)
-                        {
-                            // Log de algumas rifas para verificar os dados
-                            await _logger.LogObjectAsync("Primeira rifa recebida", _rifas.First(), LogLevel.Debug);
-                        }
-                    }
-                    else
-                    {
-                        // Loga detalhes do erro HTTP
-                        string errorContent = await response.Content.ReadAsStringAsync();
-                        await _logger.LogAsync($"API retornou status {response.StatusCode}: {errorContent}", LogLevel.Error);
-                        Snackbar.Add($"Erro ao carregar rifas: {response.StatusCode} - {response.ReasonPhrase}", Severity.Error);
-                        _rifas = new List<RifaDTO>();
-                    }
                 }
-                catch (HttpRequestException httpEx)
+
+                // Adicionamos timeout de 15 segundos para evitar esperas muito longas
+                var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+                var response = await Http.GetAsync(AppConfig.Api.Endpoints.Rifas, linkedCts.Token);
+
+                // Verifica se a requisição foi bem-sucedida
+                if (response.IsSuccessStatusCode)
+                {
+                    _rifas = await response.Content.ReadFromJsonAsync<List<RifaDTO>>(cancellationToken: linkedCts.Token);
+
+                    if (_logger != null)
+                    {
+                        await _logger.LogAsync($"API respondeu com sucesso - Recebidas {_rifas?.Count ?? 0} rifas", LogLevel.Success);
+                    }
+
+                    if (_rifas?.Count > 0 && _logger != null)
+                    {
+                        // Log de algumas rifas para verificar os dados
+                        await _logger.LogObjectAsync("Primeira rifa recebida", _rifas.First(), LogLevel.Debug);
+                    }
+
+                    // Processar as rifas recebidas
+                    await ProcessRifas();
+                }
+                else
+                {
+                    // Loga detalhes do erro HTTP
+                    string errorContent = await response.Content.ReadAsStringAsync();
+                    if (_logger != null)
+                    {
+                        await _logger.LogAsync($"API retornou status {response.StatusCode}: {errorContent}", LogLevel.Error);
+                    }
+                    Snackbar.Add($"Erro ao carregar rifas: {response.StatusCode} - {response.ReasonPhrase}", Severity.Error);
+                    _rifas = new List<RifaDTO>();
+                    _featuredRifas = new List<RifaDTO>();
+                    _upcomingRifas = new List<RifaDTO>();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Requisição foi cancelada, não mostramos erro
+            }
+            catch (HttpRequestException httpEx)
+            {
+                if (_logger != null)
                 {
                     await _logger.LogExceptionAsync(httpEx, "Erro de conexão HTTP");
-                    Snackbar.Add("Erro de conexão com o servidor. Verifique sua rede e tente novamente.", Severity.Error);
-                    _rifas = new List<RifaDTO>();
                 }
-                catch (JsonException jsonEx)
-                {
-                    await _logger.LogExceptionAsync(jsonEx, "Erro ao processar JSON");
-                    Snackbar.Add("Erro ao processar dados do servidor.", Severity.Error);
-                    _rifas = new List<RifaDTO>();
-                }
-            }
-
-            if (_rifas == null || !_rifas.Any())
-            {
-                await _logger.LogAsync("Nenhuma rifa retornada pela API", LogLevel.Warning);
-                _rifas = new List<RifaDTO>(); // Garante que _rifas nunca será null
+                Snackbar.Add("Erro de conexão com o servidor. Verifique sua rede e tente novamente.", Severity.Error);
+                _rifas = new List<RifaDTO>();
                 _featuredRifas = new List<RifaDTO>();
                 _upcomingRifas = new List<RifaDTO>();
-                return;
             }
-
-            // Processar as rifas recebidas
-            await using (await _logger.TimeOperationAsync("ProcessarRifas"))
+            catch (JsonException jsonEx)
             {
-                await _logger.LogAsync("Processando rifas recebidas", LogLevel.Info);
-
-                // Separa as rifas em destaque (com maior porcentagem de vendas)
-                _featuredRifas = _rifas
-                    .Where(r => r.DrawDateTime > DateTime.UtcNow)
-                    .OrderByDescending(r => (r.Tickets?.Count ?? 0) * 100.0 / Math.Max(1, r.MaxTickets))
-                    .Take(5)
-                    .ToList();
-
-                await _logger.LogAsync($"Rifas em destaque processadas: {_featuredRifas.Count}", LogLevel.Info);
-
-                foreach (var rifa in _featuredRifas)
+                if (_logger != null)
                 {
-                    await _logger.LogAsync($"Rifa destacada: {rifa.Id} | {rifa.Name} | Data sorteio: {rifa.DrawDateTime:dd/MM/yyyy HH:mm}", LogLevel.Debug);
+                    await _logger.LogExceptionAsync(jsonEx, "Erro ao processar JSON");
                 }
-
-                // Separa as rifas com sorteio mais próximo
-                _upcomingRifas = _rifas
-                    .Where(r => r.DrawDateTime > DateTime.UtcNow)
-                    .OrderBy(r => r.DrawDateTime)
-                    .Take(6)
-                    .ToList();
-
-                await _logger.LogAsync($"Próximos sorteios processados: {_upcomingRifas.Count}", LogLevel.Info);
-
-                foreach (var rifa in _upcomingRifas)
-                {
-                    await _logger.LogAsync($"Próximo sorteio: {rifa.Id} | {rifa.Name} | Data sorteio: {rifa.DrawDateTime:dd/MM/yyyy HH:mm}", LogLevel.Debug);
-                }
+                Snackbar.Add("Erro ao processar dados do servidor.", Severity.Error);
+                _rifas = new List<RifaDTO>();
+                _featuredRifas = new List<RifaDTO>();
+                _upcomingRifas = new List<RifaDTO>();
             }
 
-            // Implementar carregamento otimizado de imagens - precarregar as imagens das rifas destacadas
-            await using (await _logger.TimeOperationAsync("PrecarregarImagens"))
+            if (_rifas == null)
             {
-                foreach (var rifa in _featuredRifas)
-                {
-                    await _logger.LogAsync($"Precarregando imagem: {GetRifaImage(rifa)}", LogLevel.Debug);
-                    _ = PreloadImage(GetRifaImage(rifa));
-                }
+                _rifas = new List<RifaDTO>();
             }
 
-            await _logger.LogAsync("Carregamento de rifas concluído com sucesso", LogLevel.Success);
+            // Sempre garantimos que temos listas válidas, mesmo vazias
+            if (_featuredRifas == null)
+            {
+                _featuredRifas = new List<RifaDTO>();
+            }
+
+            if (_upcomingRifas == null)
+            {
+                _upcomingRifas = new List<RifaDTO>();
+            }
         }
         catch (Exception ex)
         {
-            await _logger.LogExceptionAsync(ex, "Erro no carregamento de rifas");
+            if (_logger != null)
+            {
+                await _logger.LogExceptionAsync(ex, "Erro no carregamento de rifas");
+            }
             Snackbar.Add("Erro ao carregar rifas: " + ex.Message, Severity.Error);
+
+            // Garantir que temos listas válidas mesmo com erro
+            _rifas = _rifas ?? new List<RifaDTO>();
+            _featuredRifas = _featuredRifas ?? new List<RifaDTO>();
+            _upcomingRifas = _upcomingRifas ?? new List<RifaDTO>();
         }
         finally
         {
             _loading = false;
-            StateHasChanged();
+            StateHasChanged(); // Atualizar UI após carga dos dados
+        }
+    }
+    private async Task ProcessRifas()
+    {
+        if (_rifas == null || !_rifas.Any())
+        {
+            _featuredRifas = new List<RifaDTO>();
+            _upcomingRifas = new List<RifaDTO>();
+            return;
+        }
+
+        try
+        {
+            if (_logger != null)
+            {
+                await _logger.LogAsync("Processando rifas recebidas", LogLevel.Info);
+            }
+
+            // Separa as rifas em destaque (com maior porcentagem de vendas)
+            _featuredRifas = _rifas
+                .Where(r => r.DrawDateTime > DateTime.UtcNow)
+                .OrderByDescending(r => (r.Tickets?.Count ?? 0) * 100.0 / Math.Max(1, r.MaxTickets))
+                .Take(5)
+                .ToList();
+
+            if (_logger != null)
+            {
+                await _logger.LogAsync($"Rifas em destaque processadas: {_featuredRifas.Count}", LogLevel.Info);
+            }
+
+            // Separa as rifas com sorteio mais próximo
+            _upcomingRifas = _rifas
+                .Where(r => r.DrawDateTime > DateTime.UtcNow)
+                .OrderBy(r => r.DrawDateTime)
+                .Take(6)
+                .ToList();
+
+            if (_logger != null)
+            {
+                await _logger.LogAsync($"Próximos sorteios processados: {_upcomingRifas.Count}", LogLevel.Info);
+            }
+
+            // Pré-carregamento de imagens seguro (após renderização)
+            if (_isRendered)
+            {
+                await PreloadFeaturedImages();
+            }
+        }
+        catch (Exception ex)
+        {
+            if (_logger != null)
+            {
+                await _logger.LogExceptionAsync(ex, "Erro ao processar rifas");
+            }
+        }
+    }
+    private async Task PreloadFeaturedImages()
+    {
+        if (!_isRendered || _featuredRifas == null || !_featuredRifas.Any())
+            return;
+
+        try
+        {
+            // Pré-carregar apenas as 3 primeiras para otimizar
+            foreach (var rifa in _featuredRifas.Take(3))
+            {
+                if (_logger != null)
+                {
+                    await _logger.LogAsync($"Precarregando imagem: {GetRifaImage(rifa)}", LogLevel.Debug);
+                }
+                
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("preloadImage", GetRifaImage(rifa));
+                }
+                catch (Exception)
+                {
+                    // Ignoramos erros de pré-carregamento
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            if (_logger != null)
+            {
+                await _logger.LogExceptionAsync(ex, "Erro ao pré-carregar imagens");
+            }
         }
     }
 
@@ -697,5 +802,11 @@
         {
             _logger.LogExceptionAsync(ex, "Erro ao navegar para compra").ConfigureAwait(false);
         }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 }

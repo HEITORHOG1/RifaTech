@@ -7,7 +7,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
-@inject ILocalStorageService LocalStorage
+@inject IStorageService LocalStorage
 
 @inject ILogger<MainLayout> Logger
 
@@ -73,7 +73,7 @@
                         <MudMenuItem Icon="@Icons.Material.Filled.Dashboard" OnClick="@(() => Navigation.NavigateTo("/admin/dashboard"))">Painel Admin</MudMenuItem>
                     }
                     <MudDivider />
-                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Sair</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="@(() => Navigation.NavigateTo("/logout"))">Sair</MudMenuItem>
                 </ChildContent>
             </MudMenu>
         }
@@ -122,22 +122,32 @@
     protected override async Task OnInitializedAsync()
     {
         SetupTheme();
-
-        // Carregar preferência de tema do localStorage
-        var savedTheme = await LocalStorage.GetItemAsync<string>("themeMode");
-        if (!string.IsNullOrEmpty(savedTheme) && savedTheme == "dark")
-        {
-            _isDarkMode = true;
-            SetupTheme();
-        }
-
-        await CheckAuthenticationState();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            // Agora é seguro acessar o localStorage
+            var savedTheme = await LocalStorage.GetItemAsync<string>("themeMode");
+            if (!string.IsNullOrEmpty(savedTheme) && savedTheme == "dark")
+            {
+                _isDarkMode = true;
+                SetupTheme();
+                StateHasChanged();
+            }
+
+            // Inicializar estado de autenticação após a renderização
+            if (AuthStateProvider is CustomAuthStateProvider customAuth)
+            {
+                await customAuth.InitializeAuthenticationStateAsync();
+                await CheckAuthenticationState();
+            }
+            else
+            {
+                await CheckAuthenticationState();
+            }
+
             // Podemos fazer verificações adicionais após a renderização
             if (_isAuthenticated && _isAdmin)
             {
@@ -150,6 +160,13 @@
         try
         {
             Logger.LogInformation("Verificando estado de autenticação no layout");
+
+            // Força uma atualização completa do estado de autenticação
+            if (AuthStateProvider is CustomAuthStateProvider customAuth)
+            {
+                await customAuth.InitializeAuthenticationStateAsync();
+            }
+
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
 
@@ -160,17 +177,26 @@
                 Logger.LogInformation($"Usuário autenticado. IsAdmin por claim: {_isAdmin}");
 
                 // Backup: verifica também pelos dados salvos no localStorage
-                var savedIsAdmin = await LocalStorage.GetItemAsync<bool>("isAdmin");
-                if (!_isAdmin && savedIsAdmin)
+                try
                 {
-                    _isAdmin = true;
-                    Logger.LogInformation("IsAdmin atualizado pelo localStorage");
+                    var savedIsAdmin = await LocalStorage.GetItemAsync<bool>("isAdmin");
+                    if (!_isAdmin && savedIsAdmin)
+                    {
+                        _isAdmin = true;
+                        Logger.LogInformation("IsAdmin atualizado pelo localStorage");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning($"Erro ao verificar isAdmin no localStorage: {ex.Message}");
                 }
 
                 // Obter nome do usuário
                 var name = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "";
                 _userName = name;
-                _userInitials = string.IsNullOrEmpty(name) ? "U" : string.Join("", name.Split(' ').Take(2).Select(n => n.Length > 0 ? n[0].ToString() : ""));
+                _userInitials = string.IsNullOrEmpty(name)
+                    ? "U"
+                    : string.Join("", name.Split(' ').Take(2).Select(n => n.Length > 0 ? n[0].ToString() : ""));
 
                 // Tenta obter o email como fallback para o nome
                 if (string.IsNullOrEmpty(_userName))
@@ -189,10 +215,12 @@
                 _isAdmin = false;
                 _userName = "Usuário";
                 _userInitials = "U";
+                _notificationCount = 0;
             }
 
             // Atualizar o tema após verificar o status de admin
             SetupTheme();
+            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -201,6 +229,8 @@
             _isAdmin = false;
             _userName = "Usuário";
             _userInitials = "U";
+            _notificationCount = 0;
+            StateHasChanged();
         }
     }
 

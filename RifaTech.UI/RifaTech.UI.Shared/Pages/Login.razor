@@ -4,6 +4,7 @@
 @using RifaTech.DTOs.DTOs
 @using System.Net.Http.Json
 @using Microsoft.Extensions.Logging
+@using RifaTech.UI.Shared.Config
 @using RifaTech.UI.Shared.Models
 @using RifaTech.UI.Shared.Services
 @inject HttpClient Http
@@ -11,7 +12,8 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ILogger<Login> Logger
-@inject ILocalStorageService LocalStorage
+@inject IStorageService LocalStorage
+@implements IDisposable
 
 <PageTitle>Login - RifaTech</PageTitle>
 
@@ -19,10 +21,16 @@
     <MudPaper Elevation="3" Class="pa-8">
         <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-6">Entre no RifaTech</MudText>
 
-        <MudTabs Elevation="0" Centered="true" Color="Color.Primary" Class="mt-4">
+        <MudTabs Elevation="0" Centered="true" Color="Color.Primary" Class="mt-4" @bind-ActiveIndex="_activeTabIndex">
             <MudTabPanel Text="Login" Icon="@Icons.Material.Filled.Login">
                 <EditForm Model="_loginModel" OnValidSubmit="ProcessLogin" Class="mt-4">
                     <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    @if (_loginError != null)
+                    {
+                        <MudAlert Severity="Severity.Error" Class="my-2">@_loginError</MudAlert>
+                    }
 
                     <MudTextField T="string"
                                   Label="Email"
@@ -32,6 +40,7 @@
                                   Immediate="true"
                                   Required="true"
                                   RequiredError="Email é obrigatório"
+                                  InputType="InputType.Email"
                                   Class="mb-4" />
 
                     <MudTextField T="string"
@@ -75,6 +84,12 @@
             <MudTabPanel Text="Cadastro" Icon="@Icons.Material.Filled.PersonAdd">
                 <EditForm Model="_registerModel" OnValidSubmit="ProcessRegistration" Class="mt-4">
                     <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    @if (_registerError != null)
+                    {
+                        <MudAlert Severity="Severity.Error" Class="my-2">@_registerError</MudAlert>
+                    }
 
                     <MudTextField T="string"
                                   Label="Nome Completo"
@@ -94,6 +109,7 @@
                                   Immediate="true"
                                   Required="true"
                                   RequiredError="Email é obrigatório"
+                                  InputType="InputType.Email"
                                   Class="mb-4" />
 
                     <MudTextField T="string"
@@ -104,6 +120,7 @@
                                   Immediate="true"
                                   Required="true"
                                   RequiredError="CPF é obrigatório"
+                                  Mask="@(new PatternMask("000.000.000-00"))"
                                   Class="mb-4" />
 
                     <MudTextField T="string"
@@ -167,7 +184,7 @@
                 </TitleContent>
                 <ChildContent>
                     <MudText Typo="Typo.caption">Status de Login: @_loginStatus</MudText>
-                    <MudText Typo="Typo.caption">Token: @_debugToken?.Substring(0, Math.Min(50, _debugToken?.Length ?? 0))...</MudText>
+                    <MudText Typo="Typo.caption">Token: @(_debugToken != null ? _debugToken.Substring(0, Math.Min(50, _debugToken.Length)) + "..." : "Nenhum")</MudText>
                     <MudText Typo="Typo.caption">Role: @_userRole</MudText>
                     <MudText Typo="Typo.caption">IsAdmin: @_isAdmin</MudText>
                 </ChildContent>
@@ -196,6 +213,11 @@
     private bool _showPassword = false;
     private bool _rememberMe = false;
     private bool _processing = false;
+    private bool _isRendered = false;
+    private int _activeTabIndex = 0;
+    private string _loginError;
+    private string _registerError;
+    private CancellationTokenSource _cts;
 
     // Debug information
     private bool _debugMode = false;
@@ -205,14 +227,25 @@
     private bool _isAdmin = false;
     private string _debugError = null;
 
+    // Query parameter for return URL
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string ReturnUrl { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
-        // Verificar se já tem email salvo para lembrar
-        var savedEmail = await LocalStorage.GetItemAsync<string>("email");
-        if (!string.IsNullOrEmpty(savedEmail))
+        // Verificar se já estamos logados e redirecionar
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity.IsAuthenticated)
         {
-            _loginModel.Email = savedEmail;
-            _rememberMe = true;
+            if (string.IsNullOrEmpty(ReturnUrl))
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                Navigation.NavigateTo(ReturnUrl);
+            }
         }
 
         // Em ambiente de desenvolvimento, podemos ativar o modo debug
@@ -221,27 +254,92 @@
 #endif
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+
+            try
+            {
+                // Verificar se já tem email salvo para lembrar - seguro após renderização
+                var savedEmail = await LocalStorage.GetItemAsync<string>("email");
+                if (!string.IsNullOrEmpty(savedEmail))
+                {
+                    _loginModel.Email = savedEmail;
+                    _rememberMe = true;
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning("Não foi possível recuperar email salvo: {Message}", ex.Message);
+                // Continuamos mesmo sem conseguir carregar o email
+            }
+        }
+    }
+
     private void ToggleDebugMode()
     {
         _debugMode = !_debugMode;
     }
 
+
     private async Task ProcessLogin()
     {
+        if (!_isRendered)
+        {
+            // Proteção adicional para não processar antes da renderização
+            return;
+        }
+
+        _loginError = null;
+
+        // Validações básicas no cliente
+        if (string.IsNullOrWhiteSpace(_loginModel.Email))
+        {
+            _loginError = "O email é obrigatório";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_loginModel.Password))
+        {
+            _loginError = "A senha é obrigatória";
+            return;
+        }
+
+        // Cancelar qualquer operação de login anterior
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+
         _processing = true;
         _loginStatus = "Iniciando login";
         _debugError = null;
+        StateHasChanged();
 
         try
         {
             Logger.LogInformation($"Tentando login para usuário: {_loginModel.Email}");
 
-            var response = await Http.PostAsJsonAsync("api/manage/login", _loginModel);
+            // Log da URL base para depuração
+            var baseUrl = Http.BaseAddress?.ToString() ?? "Não definido";
+            Logger.LogInformation($"Base URL do HttpClient: {baseUrl}");
+
+            // Usar o endpoint definido no AppConfig
+            string loginEndpoint = AppConfig.Api.Endpoints.Login;
+            Logger.LogInformation($"Usando endpoint de login: {loginEndpoint}");
+
+            // Adicionar timeout para evitar que a operação demore muito
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+            // Fazer a chamada de API usando o endpoint completo
+            var response = await Http.PostAsJsonAsync(loginEndpoint, _loginModel, linkedCts.Token);
 
             if (response.IsSuccessStatusCode)
             {
                 _loginStatus = "Resposta recebida com sucesso";
-                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                var result = await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken: linkedCts.Token);
 
                 if (result.Flag)
                 {
@@ -252,18 +350,26 @@
 
                     Logger.LogInformation($"Login bem-sucedido. Token recebido. IsAdmin: {result.EhAdmin}, Role: {result.Role}");
 
-                    // Salvar informações no localStorage
-                    await LocalStorage.SetItemAsync("authToken", result.Token);
-                    await LocalStorage.SetItemAsync("refreshToken", result.RefreshToken);
-
-                    // Salvar informações de admin para uso posterior
-                    await LocalStorage.SetItemAsync("userRole", result.Role);
-                    await LocalStorage.SetItemAsync("isAdmin", result.EhAdmin);
-                    await LocalStorage.SetItemAsync("userId", result.Id);
-
-                    if (_rememberMe)
+                    try
                     {
-                        await LocalStorage.SetItemAsync("email", _loginModel.Email);
+                        // Salvar informações no localStorage usando as chaves definidas no AppConfig
+                        await LocalStorage.SetItemAsync(AppConfig.LocalStorage.AuthTokenKey, result.Token);
+                        await LocalStorage.SetItemAsync(AppConfig.LocalStorage.RefreshTokenKey, result.RefreshToken);
+
+                        // Salvar informações de admin para uso posterior
+                        await LocalStorage.SetItemAsync("userRole", result.Role);
+                        await LocalStorage.SetItemAsync("isAdmin", result.EhAdmin);
+                        await LocalStorage.SetItemAsync("userId", result.Id);
+
+                        if (_rememberMe)
+                        {
+                            await LocalStorage.SetItemAsync(AppConfig.LocalStorage.UserEmailKey, _loginModel.Email);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Falha ao gravar no localStorage, mas continuamos com o login
+                        Logger.LogWarning("Falha ao salvar dados no localStorage: {Message}", ex.Message);
                     }
 
                     // Notificar o provedor de autenticação
@@ -276,7 +382,12 @@
                     Snackbar.Add("Login realizado com sucesso!", Severity.Success);
 
                     // Redirecionar para a página apropriada
-                    if (result.EhAdmin)
+                    if (!string.IsNullOrEmpty(ReturnUrl))
+                    {
+                        _loginStatus = $"Redirecionando para {ReturnUrl}";
+                        Navigation.NavigateTo(ReturnUrl);
+                    }
+                    else if (result.EhAdmin)
                     {
                         _loginStatus = "Redirecionando para área administrativa";
                         Navigation.NavigateTo("/admin/dashboard");
@@ -290,6 +401,7 @@
                 else
                 {
                     _loginStatus = $"Falha no login: {result.Message}";
+                    _loginError = result.Message;
                     _debugError = result.Message;
                     Logger.LogWarning($"Falha no login: {result.Message}");
                     Snackbar.Add(result.Message, Severity.Error);
@@ -299,14 +411,24 @@
             {
                 var error = await response.Content.ReadAsStringAsync();
                 _loginStatus = $"Erro na requisição: {response.StatusCode}";
+                _loginError = "Falha na autenticação. Verifique suas credenciais.";
                 _debugError = error;
                 Logger.LogError($"Erro na requisição de login. Status: {response.StatusCode}, Erro: {error}");
                 Snackbar.Add($"Erro ao realizar login: {error}", Severity.Error);
             }
         }
+        catch (TaskCanceledException)
+        {
+            _loginStatus = "Requisição cancelada";
+            _loginError = "A requisição foi cancelada. Tente novamente.";
+            _debugError = "A requisição foi cancelada";
+            Logger.LogWarning("Requisição de login cancelada");
+            Snackbar.Add("A requisição foi cancelada. Tente novamente.", Severity.Warning);
+        }
         catch (Exception ex)
         {
             _loginStatus = $"Exceção: {ex.Message}";
+            _loginError = "Ocorreu um erro ao processar o login. Tente novamente.";
             _debugError = ex.ToString();
             Logger.LogError(ex, "Erro ao processar login");
             Snackbar.Add($"Erro: {ex.Message}", Severity.Error);
@@ -314,44 +436,98 @@
         finally
         {
             _processing = false;
+            StateHasChanged();
         }
     }
 
     private async Task ProcessRegistration()
     {
+        if (!_isRendered)
+        {
+            // Proteção adicional para não processar antes da renderização
+            return;
+        }
+
+        _registerError = null;
+
+        // Validações básicas no cliente
+        if (string.IsNullOrWhiteSpace(_registerModel.Email))
+        {
+            _registerError = "O email é obrigatório";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_registerModel.Password))
+        {
+            _registerError = "A senha é obrigatória";
+            return;
+        }
+
+        if (_registerModel.Password != _registerModel.ConfirmPassword)
+        {
+            _registerError = "As senhas não coincidem";
+            return;
+        }
+
+        // Cancelar qualquer operação de registro anterior
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+
         _processing = true;
+        StateHasChanged();
 
         try
         {
             Logger.LogInformation($"Tentando registrar usuário: {_registerModel.Email}");
 
-            var response = await Http.PostAsJsonAsync("api/manage/register", _registerModel);
+            // Adicionar timeout para evitar que a operação demore muito
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+            var response = await Http.PostAsJsonAsync("api/manage/register", _registerModel, linkedCts.Token);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<dynamic>();
+                var result = await response.Content.ReadFromJsonAsync<dynamic>(cancellationToken: linkedCts.Token);
                 Logger.LogInformation("Cadastro realizado com sucesso");
                 Snackbar.Add("Cadastro realizado com sucesso! Faça login para continuar.", Severity.Success);
 
                 // Limpar formulário e mudar para a aba de login
                 _registerModel = new UserDTO();
+                _activeTabIndex = 0; // Muda para a aba de login
                 await InvokeAsync(StateHasChanged);
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
                 Logger.LogError($"Erro no registro. Status: {response.StatusCode}, Erro: {error}");
+                _registerError = $"Erro ao realizar cadastro: {error}";
                 Snackbar.Add($"Erro ao realizar cadastro: {error}", Severity.Error);
             }
+        }
+        catch (TaskCanceledException)
+        {
+            Logger.LogWarning("Requisição de registro cancelada");
+            _registerError = "A requisição foi cancelada. Tente novamente.";
+            Snackbar.Add("A requisição foi cancelada. Tente novamente.", Severity.Warning);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Erro ao processar registro");
+            _registerError = $"Erro: {ex.Message}";
             Snackbar.Add($"Erro: {ex.Message}", Severity.Error);
         }
         finally
         {
             _processing = false;
+            StateHasChanged();
         }
+    }
+
+    // Implementar IDisposable para cancelar operações pendentes
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 }

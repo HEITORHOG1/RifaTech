@@ -1,5 +1,16 @@
 ﻿// app.js - Adicionar à pasta wwwroot/js/ do projeto
+// Variável para controlar se o JS Interop está pronto para uso
+window.isJsInteropReady = function () {
+    return true;
+};
 
+// Evento disparado quando o documento estiver carregado
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('JavaScript interop está pronto');
+    window.isJsInteropReady = function () {
+        return true;
+    };
+});
 // Função para precarregar imagens
 window.preloadImage = (url) => {
     return new Promise((resolve, reject) => {
@@ -133,8 +144,3 @@ window.monitorElementChanges = (selector) => {
     }
 };
 
-// Inicializar quando o documento estiver pronto
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Utilitários de depuração inicializados');
-    window.setupNetworkMonitoring();
-});

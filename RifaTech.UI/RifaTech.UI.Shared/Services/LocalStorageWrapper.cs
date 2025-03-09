@@ -2,9 +2,9 @@
 {
     public class LocalStorageWrapper
     {
-        private readonly ILocalStorageService _localStorage;
+        private readonly IStorageService _localStorage;
 
-        public LocalStorageWrapper(ILocalStorageService localStorage)
+        public LocalStorageWrapper(IStorageService localStorage)
         {
             _localStorage = localStorage;
         }

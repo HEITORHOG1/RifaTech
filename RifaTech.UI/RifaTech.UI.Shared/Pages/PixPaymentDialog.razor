@@ -4,43 +4,44 @@
 @inject ISnackbar Snackbar
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <MudDialog DisableSidePadding="true" ClassContent="px-0">
     <DialogContent>
         <MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
             <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-4">Pagamento via PIX</MudText>
-            
+
             <MudGrid>
-              <MudItem xs="12" Class="d-flex justify-center">
-                   @if (string.IsNullOrEmpty(Payment.QrCodeBase64))
-                   {
-                       <MudProgressCircular Indeterminate="true" />
-                   }
-                   else
-                   {
-                       <MudImage Src="@($"data:image/png;base64,{Payment.QrCodeBase64}")"
-                                Width="200" Height="200" 
-                                Class="mud-elevation-3" />
-                   }
-               </MudItem>
-               
-               <MudItem xs="12" Class="mt-4">
-                   <MudTextField @bind-Value="Payment.QrCode"
-                               Label="Código PIX Copia e Cola"
-                               ReadOnly="true"
-                               Variant="Variant.Outlined"
-                               Adornment="Adornment.End"
-                               AdornmentIcon="@Icons.Material.Filled.ContentCopy"
-                               OnAdornmentClick="CopyPixCode" />
-               </MudItem>
-               
-               <MudItem xs="12" Class="mt-2">
-                   <MudAlert Severity="Severity.Info" Variant="Variant.Filled">
-                       Este QR Code é válido por 15 minutos. Após o pagamento, seus tickets serão gerados automaticamente.
-                   </MudAlert>
-               </MudItem>
-               
-               <MudItem xs="12" Class="mt-4">
+                <MudItem xs="12" Class="d-flex justify-center">
+                    @if (string.IsNullOrEmpty(Payment.QrCodeBase64))
+                    {
+                        <MudProgressCircular Indeterminate="true" />
+                    }
+                    else
+                    {
+                        <MudImage Src="@($"data:image/png;base64,{Payment.QrCodeBase64}")"
+                                  Width="200" Height="200"
+                                  Class="mud-elevation-3" />
+                    }
+                </MudItem>
+
+                <MudItem xs="12" Class="mt-4">
+                    <MudTextField @bind-Value="Payment.QrCode"
+                                  Label="Código PIX Copia e Cola"
+                                  ReadOnly="true"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@Icons.Material.Filled.ContentCopy"
+                                  OnAdornmentClick="CopyPixCode" />
+                </MudItem>
+
+                <MudItem xs="12" Class="mt-2">
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Filled">
+                        Este QR Code é válido por 15 minutos. Após o pagamento, seus tickets serão gerados automaticamente.
+                    </MudAlert>
+                </MudItem>
+
+                <MudItem xs="12" Class="mt-4">
                     <MudExpansionPanels T="string">
                         <MudExpansionPanel Text="Detalhes da Compra">
                             <MudList T="string">
@@ -56,59 +57,55 @@
                             </MudList>
                         </MudExpansionPanel>
                     </MudExpansionPanels>
-               </MudItem>
-               
-               <MudItem xs="12" Class="d-flex justify-center mt-4">
-                   <MudButton OnClick="CheckPaymentStatus" 
-                            Variant="Variant.Filled" 
-                            Color="Color.Primary" 
-                            StartIcon="@Icons.Material.Filled.Refresh"
-                            Disabled="_checkingStatus">
-                       @if (_checkingStatus)
-                       {
-                           <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                           <MudText Class="ms-2">Verificando...</MudText>
-                       }
-                       else
-                       {
-                           <MudText>Verificar Pagamento</MudText>
-                       }
-                   </MudButton>
-               </MudItem>
-           </MudGrid>
-       </MudContainer>
-   </DialogContent>
-   <DialogActions>
-       <MudButton OnClick="Close">Fechar</MudButton>
-   </DialogActions>
+                </MudItem>
+
+                <MudItem xs="12" Class="d-flex justify-center mt-4">
+                    <MudButton OnClick="CheckPaymentStatus"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="_checkingStatus">
+                        @if (_checkingStatus)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">Verificando...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>Verificar Pagamento</MudText>
+                        }
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Fechar</MudButton>
+    </DialogActions>
 </MudDialog>
 
 @code {
-   [CascadingParameter] MudDialogInstance MudDialog { get; set; }
-   
-   [Parameter] public PaymentDTO Payment { get; set; }
-   [Parameter] public Guid RifaId { get; set; }
-   [Parameter] public decimal Amount { get; set; }
-    private bool _isRendered = false;
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
 
-   private bool _checkingStatus = false;
-   private System.Threading.Timer _timer;
-   
-   protected override void OnInitialized()
-   {
-       // Iniciar verificação automática a cada 10 segundos
-       _timer = new System.Threading.Timer(
-           async _ => await CheckPaymentStatusAuto(), 
-           null, 
-           TimeSpan.FromSeconds(10), 
-           TimeSpan.FromSeconds(10));
-   }
+    [Parameter] public PaymentDTO Payment { get; set; }
+    [Parameter] public Guid RifaId { get; set; }
+    [Parameter] public decimal Amount { get; set; }
+
+    private bool _isRendered = false;
+    private bool _checkingStatus = false;
+    private System.Threading.Timer _timer;
+    private CancellationTokenSource _cts;
+
+    protected override void OnInitialized()
+    {
+        // Não iniciar o timer aqui para evitar erros de JS interop
+    }
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
             _isRendered = true;
-            // Initialize timer here
+            // Initialize timer aqui, após a renderização
             _timer = new System.Threading.Timer(
                 async _ => await CheckPaymentStatusAuto(),
                 null,
@@ -119,78 +116,109 @@
     private async Task CopyPixCode()
     {
         if (!_isRendered) return;
-        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Payment.QrCode);
-        Snackbar.Add("Código PIX copiado!", Severity.Success);
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Payment.QrCode);
+            Snackbar.Add("Código PIX copiado!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Não foi possível copiar o código: " + ex.Message, Severity.Error);
+        }
     }
    
-   private async Task CheckPaymentStatus()
-   {
-       _checkingStatus = true;
-       
-       try
-       {
-           var status = await Http.GetFromJsonAsync<PaymentDTO>($"api/payments/status/{Payment.Id}");
-           
-           if (status.Status == 1) // Confirmado (usar o enum correto)
-           {
-               Snackbar.Add("Pagamento confirmado! Seus tickets foram gerados.", Severity.Success);
-               MudDialog.Close();
-               Navigation.NavigateTo($"/tickets/compra-sucesso/{RifaId}");
-           }
-           else if (status.Status == 2) // Expirado
-           {
-               Snackbar.Add("Este pagamento expirou. Por favor, gere um novo.", Severity.Warning);
-               MudDialog.Close();
-           }
-           else
-           {
-               Snackbar.Add("Pagamento ainda não confirmado. Tente novamente em alguns instantes.", Severity.Info);
-           }
-       }
-       catch (Exception ex)
-       {
-           Snackbar.Add($"Erro ao verificar status: {ex.Message}", Severity.Error);
-       }
-       finally
-       {
-           _checkingStatus = false;
-       }
-   }
+    private async Task CheckPaymentStatus()
+    {
+        if (_checkingStatus) return; // Evitar verificações simultâneas
+
+        _checkingStatus = true;
+        StateHasChanged();
+
+        try
+        {
+            // Cancelar qualquer verificação anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            // Adicionar timeout para evitar esperas muito longas
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+            var status = await Http.GetFromJsonAsync<PaymentDTO>($"api/payments/status/{Payment.Id}", linkedCts.Token);
+
+            if (status.Status == 1) // Confirmado (usar o enum correto)
+            {
+                Snackbar.Add("Pagamento confirmado! Seus tickets foram gerados.", Severity.Success);
+                MudDialog.Close();
+                Navigation.NavigateTo($"/tickets/compra-sucesso/{RifaId}");
+            }
+            else if (status.Status == 2) // Expirado
+            {
+                Snackbar.Add("Este pagamento expirou. Por favor, gere um novo.", Severity.Warning);
+                MudDialog.Close();
+            }
+            else
+            {
+                Snackbar.Add("Pagamento ainda não confirmado. Tente novamente em alguns instantes.", Severity.Info);
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Requisição cancelada, não exibir erro
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao verificar status: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _checkingStatus = false;
+            StateHasChanged();
+        }
+    }
    
-   private async Task CheckPaymentStatusAuto()
-   {
-       if (_checkingStatus) return;
-       
-       try
-       {
-           var status = await Http.GetFromJsonAsync<PaymentDTO>($"api/payments/status/{Payment.Id}");
-           
-           if (status.Status == 1) // Confirmado (usar o enum correto)
-           {
-               await InvokeAsync(() => {
-                   Snackbar.Add("Pagamento confirmado! Seus tickets foram gerados.", Severity.Success);
-                   MudDialog.Close();
-                   Navigation.NavigateTo($"/tickets/compra-sucesso/{RifaId}");
-               });
-           }
-           else if (status.Status == 2) // Expirado
-           {
-               await InvokeAsync(() => {
-                   Snackbar.Add("Este pagamento expirou. Por favor, gere um novo.", Severity.Warning);
-                   MudDialog.Close();
-               });
-           }
-       }
-       catch (Exception)
-       {
-           // Silenciar erros nas verificações automáticas
-       }
-   }
+    private async Task CheckPaymentStatusAuto()
+    {
+        if (_checkingStatus || !_isRendered) return;
+
+        try
+        {
+            // Use uma CTS separada para verificações automáticas com timeout de 5 segundos
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+            var status = await Http.GetFromJsonAsync<PaymentDTO>($"api/payments/status/{Payment.Id}", cts.Token);
+
+            if (status.Status == 1) // Confirmado (usar o enum correto)
+            {
+                await InvokeAsync(() =>
+                {
+                    Snackbar.Add("Pagamento confirmado! Seus tickets foram gerados.", Severity.Success);
+                    MudDialog.Close();
+                    Navigation.NavigateTo($"/tickets/compra-sucesso/{RifaId}");
+                });
+            }
+            else if (status.Status == 2) // Expirado
+            {
+                await InvokeAsync(() =>
+                {
+                    Snackbar.Add("Este pagamento expirou. Por favor, gere um novo.", Severity.Warning);
+                    MudDialog.Close();
+                });
+            }
+        }
+        catch (Exception)
+        {
+            // Silenciar erros nas verificações automáticas
+        }
+    }
    
-   public void Dispose()
-   {
-       _timer?.Dispose();
-   }
+    public void Dispose()
+    {
+        _timer?.Dispose();
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
    
    private void Close() => MudDialog.Close();
 }

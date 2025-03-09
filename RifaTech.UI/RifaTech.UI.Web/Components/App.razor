@@ -10,8 +10,13 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
 
-@*     <link rel="stylesheet" href="HydroMeasure.Hibrid.Web.styles.css" />
-    <link rel="icon" type="image/png" href="_content/HydroMeasure.Hibrid.Shared/favicon.png" /> *@
+    <!-- Script para correção do JS interop -->
+    <script>
+        window.isJsInteropReady = function() {
+            return true;
+        };
+    </script>
+
     <HeadOutlet @rendermode="InteractiveAuto" />
     <title>RIFA</title>
 </head>

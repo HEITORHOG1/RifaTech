@@ -20,45 +20,45 @@ namespace RifaTech.UI.Shared.Config
             public static class Endpoints
             {
                 // Rifas
-                public const string Rifas = "/api/rifas";
-                public const string RifaById = "/api/rifas/{0}"; // Formato: /api/rifas/guid
-                public const string RifasPaginated = "/api/rifas/paginated";
-                public const string RifasDestaque = "/api/rifas/destaque";
+                public const string Rifas = "/rifas";
+                public const string RifaById = "/rifas/{0}"; // Formato: /rifas/guid
+                public const string RifasPaginated = "/rifas/paginated";
+                public const string RifasDestaque = "/rifas/destaque";
 
                 // Tickets
-                public const string Tickets = "/api/tickets";
-                public const string TicketsByRifa = "/api/rifa/{0}/tickets"; // Formato: /api/rifa/guid/tickets
-                public const string TicketById = "/api/ticket/{0}"; // Formato: /api/ticket/guid
-                public const string BuyTicket = "/api/rifa/{0}/buy-ticket"; // Formato: /api/rifa/guid/buy-ticket
+                public const string Tickets = "/tickets";
+                public const string TicketsByRifa = "/rifa/{0}/tickets"; // Formato: /rifa/guid/tickets
+                public const string TicketById = "/ticket/{0}"; // Formato: /ticket/guid
+                public const string BuyTicket = "/rifa/{0}/buy-ticket"; // Formato: /rifa/guid/buy-ticket
 
                 // Clientes
-                public const string Clientes = "/api/clientes";
-                public const string ClienteById = "/api/clientes/{0}"; // Formato: /api/clientes/guid
-                public const string ClienteLookup = "/api/clientes/lookup"; // Busca por email, telefone ou CPF
+                public const string Clientes = "/clientes";
+                public const string ClienteById = "/clientes/{0}"; // Formato: /clientes/guid
+                public const string ClienteLookup = "/clientes/lookup"; // Busca por email, telefone ou CPF
 
                 // Pagamentos
-                public const string Payments = "/api/payments";
-                public const string PaymentById = "/api/payments/{0}"; // Formato: /api/payments/guid
-                public const string PaymentStatus = "/api/payments/status/{0}"; // Formato: /api/payments/status/guid
-                public const string PaymentPix = "/api/payments/pix"; // Gerar pagamento PIX
+                public const string Payments = "/payments";
+                public const string PaymentById = "/payments/{0}"; // Formato: /payments/guid
+                public const string PaymentStatus = "/payments/status/{0}"; // Formato: /payments/status/guid
+                public const string PaymentPix = "/payments/pix"; // Gerar pagamento PIX
 
                 // Compra Rápida
-                public const string CompraRapida = "/api/compra-rapida/{0}"; // Formato: /api/compra-rapida/guid
+                public const string CompraRapida = "/compra-rapida/{0}"; // Formato: /compra-rapida/guid
 
                 // Autenticação
-                public const string Auth = "/api/manage";
-                public const string Login = "/api/manage/login";
-                public const string Register = "/api/manage/register";
-                public const string RefreshToken = "/api/manage/refresh-token";
-                public const string UserInfo = "/api/manage/info";
-                public const string Users = "/api/manage/users";
+                public const string Auth = "/manage";
+                public const string Login = "/manage/login";  // Remover o / do início
+                public const string Register = "/manage/register";
+                public const string RefreshToken = "/manage/refresh-token";
+                public const string UserInfo = "/manage/info";
+                public const string Users = "/manage/users";
 
                 // Admin
-                public const string AdminStats = "/api/admin/dashboard/stats";
-                public const string AdminSalesReport = "/api/admin/sales/report";
-                public const string AdminTopSellingRifas = "/api/admin/rifas/top-selling";
-                public const string AdminRecentSales = "/api/admin/tickets/recent-sales";
-                public const string AdminUpcomingDraws = "/api/admin/draws/upcoming";
+                public const string AdminStats = "/admin/dashboard/stats";
+                public const string AdminSalesReport = "/admin/sales/report";
+                public const string AdminTopSellingRifas = "/admin/rifas/top-selling";
+                public const string AdminRecentSales = "/admin/tickets/recent-sales";
+                public const string AdminUpcomingDraws = "/admin/draws/upcoming";
             }
         }
 

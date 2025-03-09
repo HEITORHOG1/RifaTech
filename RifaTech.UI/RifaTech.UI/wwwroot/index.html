@@ -14,7 +14,54 @@
     <!--<link rel="stylesheet" href="HydroMeasure.Hibrid.styles.css" />-->
     <link rel="icon" href="data:,">
 </head>
+<script>
+    // Utilitário para verificar se o JS interop está disponível (não estamos em pré-renderização)
+    window.isJsInteropReady = function () {
+        return true;
+    };
 
+    // Tenta registrar um método para aguardar que o blazor esteja inicializado
+    if (window.Blazor) {
+        window.Blazor.addEventListener('afterStarted', function () {
+            console.log("Blazor inicializado e JS interop disponível");
+            window.blazorReady = true;
+        });
+    } else {
+        document.addEventListener('DOMContentLoaded', function () {
+            // Aguardar até que o Blazor esteja definido e inicializado
+            var checkBlazorReady = setInterval(function () {
+                if (window.Blazor && window.Blazor._internal) {
+                    clearInterval(checkBlazorReady);
+                    console.log("Blazor inicializado e JS interop disponível");
+                    window.blazorReady = true;
+                }
+            }, 100);
+        });
+    }
+
+    // Função para pré-carregar imagens
+    window.preloadImage = function (url) {
+        return new Promise((resolve, reject) => {
+            if (!url) {
+                console.warn('URL de imagem vazia fornecida para preloadImage');
+                resolve();
+                return;
+            }
+
+            const img = new Image();
+            img.onload = () => {
+                console.log(`Imagem pré-carregada com sucesso: ${url}`);
+                resolve();
+            };
+            img.onerror = (err) => {
+                console.error(`Erro ao pré-carregar imagem: ${url}`, err);
+                // Resolvemos mesmo com erro para não bloquear o fluxo
+                resolve();
+            };
+            img.src = url;
+        });
+    };
+</script>
 <body>
 
     <div class="status-bar-safe-area"></div>

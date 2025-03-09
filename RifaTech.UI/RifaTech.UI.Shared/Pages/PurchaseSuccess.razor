@@ -5,23 +5,24 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
 
 <PageTitle>Compra Realizada - RifaTech</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
     <MudPaper Elevation="3" Class="pa-6">
         <div class="d-flex flex-column align-center mb-6">
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
-                   Color="Color.Success" 
-                   Size="Size.Large" 
-                   Class="mb-4" />
-            
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                     Color="Color.Success"
+                     Size="Size.Large"
+                     Class="mb-4" />
+
             <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">Compra Realizada com Sucesso!</MudText>
             <MudText Typo="Typo.body1" Align="Align.Center">
                 Seus tickets foram gerados e estão disponíveis abaixo.
             </MudText>
         </div>
-        
+
         @if (_loading)
         {
             <div class="d-flex justify-center my-4">
@@ -37,7 +38,7 @@
         else
         {
             <MudText Typo="Typo.h6" Class="mb-3">Seus Números:</MudText>
-            
+
             <div class="d-flex flex-wrap gap-2 mb-6">
                 @foreach (var ticket in _tickets)
                 {
@@ -46,24 +47,24 @@
                     </MudChip>
                 }
             </div>
-            
+
             <MudAlert Severity="Severity.Info" Class="mb-4">
                 Guarde seus números! Você também pode acessá-los a qualquer momento na página "Meus Tickets".
             </MudAlert>
         }
-        
+
         <MudDivider Class="my-4" />
-        
+
         <div class="d-flex justify-center gap-2">
             <MudButton Variant="Variant.Outlined"
-                     Color="Color.Primary"
-                     Href="/tickets/meus">
+                       Color="Color.Primary"
+                       Href="/tickets/meus">
                 Meus Tickets
             </MudButton>
-            
+
             <MudButton Variant="Variant.Filled"
-                     Color="Color.Primary"
-                     Href="/rifas">
+                       Color="Color.Primary"
+                       Href="/rifas">
                 Continuar Comprando
             </MudButton>
         </div>
@@ -73,42 +74,84 @@
 @code {
     [Parameter]
     public Guid RifaId { get; set; }
-    
+
     private List<TicketDTO> _tickets;
     private bool _loading = true;
-    
+    private bool _isRendered = false;
+    private CancellationTokenSource _cts;
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadTickets();
+        // Não carregamos tickets aqui para evitar problemas com JS interop
+        _loading = true;
     }
-    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+            // Agora é seguro carregar os tickets
+            await LoadTickets();
+        }
+    }
+
     private async Task LoadTickets()
     {
         try
         {
             _loading = true;
+            StateHasChanged();
+
+            // Cancelar qualquer operação anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            // Adicionar timeout para evitar esperas muito longas
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-            
-            if (authState.User.Identity.IsAuthenticated)
+
+            if (authState.User.Identity?.IsAuthenticated == true)
             {
                 var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                _tickets = await Http.GetFromJsonAsync<List<TicketDTO>>($"api/tickets/meus");
-                
+                _tickets = await Http.GetFromJsonAsync<List<TicketDTO>>("api/tickets/meus", linkedCts.Token);
+
                 // Filtrar apenas tickets da rifa atual e os mais recentes (últimas 24h)
                 var yesterday = DateTime.UtcNow.AddDays(-1);
                 _tickets = _tickets
-                    .Where(t => t.RifaId == RifaId && t.CreatedAt > yesterday)
-                    .OrderByDescending(t => t.CreatedAt)
-                    .ToList();
+                    ?.Where(t => t.RifaId == RifaId && t.CreatedAt > yesterday)
+                    ?.OrderByDescending(t => t.CreatedAt)
+                    ?.ToList() ?? new List<TicketDTO>();
             }
+            else
+            {
+                // Se não estiver autenticado, mostrar array vazio
+                _tickets = new List<TicketDTO>();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Se a operação foi cancelada, não mostramos erro
+            _tickets = new List<TicketDTO>();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Erro ao carregar tickets: {ex.Message}", Severity.Error);
+            _tickets = new List<TicketDTO>();
         }
         finally
         {
             _loading = false;
+            StateHasChanged();
         }
+    }
+
+    // Implementar IDisposable para cancelar operações pendentes
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 }

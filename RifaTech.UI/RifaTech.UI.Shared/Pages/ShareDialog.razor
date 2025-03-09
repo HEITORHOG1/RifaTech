@@ -69,34 +69,65 @@
     [Parameter] public string RifaNome { get; set; }
     [Parameter] public string RifaLink { get; set; }
 
+    private bool _isRendered = false;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+        }
+    }
+
     private async Task CopyToClipboard()
     {
-        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", RifaLink);
-        Snackbar.Add("Link copiado para a área de transferência!", Severity.Success);
+        if (!_isRendered) return;
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", RifaLink);
+            Snackbar.Add("Link copiado para a área de transferência!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Não foi possível copiar o link: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task ShareVia(string platform)
     {
-        string url = "";
-        string message = $"Confira esta rifa no RifaTech: {RifaNome}";
+        if (!_isRendered) return;
 
-        switch (platform)
+        try
         {
-            case "whatsapp":
-                url = $"https://wa.me/?text={Uri.EscapeDataString(message + " " + RifaLink)}";
-                break;
-            case "facebook":
-                url = $"https://www.facebook.com/sharer/sharer.php?u={Uri.EscapeDataString(RifaLink)}";
-                break;
-            case "twitter":
-                url = $"https://twitter.com/intent/tweet?text={Uri.EscapeDataString(message)}&url={Uri.EscapeDataString(RifaLink)}";
-                break;
-            case "email":
-                url = $"mailto:?subject={Uri.EscapeDataString("Rifa: " + RifaNome)}&body={Uri.EscapeDataString(message + "\n\n" + RifaLink)}";
-                break;
-        }
+            string url = "";
+            string message = $"Confira esta rifa no RifaTech: {RifaNome}";
 
-        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+            switch (platform)
+            {
+                case "whatsapp":
+                    url = $"https://wa.me/?text={Uri.EscapeDataString(message + " " + RifaLink)}";
+                    break;
+                case "facebook":
+                    url = $"https://www.facebook.com/sharer/sharer.php?u={Uri.EscapeDataString(RifaLink)}";
+                    break;
+                case "twitter":
+                    url = $"https://twitter.com/intent/tweet?text={Uri.EscapeDataString(message)}&url={Uri.EscapeDataString(RifaLink)}";
+                    break;
+                case "email":
+                    url = $"mailto:?subject={Uri.EscapeDataString("Rifa: " + RifaNome)}&body={Uri.EscapeDataString(message + "\n\n" + RifaLink)}";
+                    break;
+                default:
+                    Snackbar.Add("Plataforma de compartilhamento não suportada", Severity.Error);
+                    return;
+            }
+
+            await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao compartilhar: {ex.Message}", Severity.Error);
+        }
     }
 
     private void Close() => MudDialog.Close();

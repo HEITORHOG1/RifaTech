@@ -4,12 +4,14 @@
 @using Microsoft.Extensions.Logging
 @using RifaTech.DTOs.DTOs.AdminDashboard
 @using MudBlazor
+@using RifaTech.UI.Shared.Config
 @attribute [Authorize(Roles = "Admin")]
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject ILogger<AdminDashboard> Logger
 @inject IDialogService DialogService
+@implements IDisposable
 
 <PageTitle>Painel Administrativo - RifaTech</PageTitle>
 
@@ -26,135 +28,6 @@
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
         <MudText Typo="Typo.body1" Class="mt-4">Carregando dados do dashboard...</MudText>
     </MudContainer>
-
-}
-@code {
-    private bool _loading = true;
-    private AdminDashboardStatsDTO _stats;
-    private List<RecentTicketSaleDTO> _recentSales;
-    private List<UpcomingDrawDTO> _upcomingDraws;
-    private List<TopSellingRifaDTO> _topRifas;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Logger.LogInformation("Inicializando dashboard administrativo");
-        await LoadDashboardStats();
-    }
-
-    private async Task LoadDashboardStats()
-    {
-        try
-        {
-            _loading = true;
-            StateHasChanged();
-
-            Logger.LogInformation("Carregando estatísticas do dashboard");
-            
-            // Carregar estatísticas gerais
-            _stats = await Http.GetFromJsonAsync<AdminDashboardStatsDTO>("api/admin/dashboard/stats");
-            
-            // Carregar vendas recentes
-            _recentSales = await Http.GetFromJsonAsync<List<RecentTicketSaleDTO>>("api/admin/tickets/recent-sales?count=5");
-            
-            // Carregar próximos sorteios
-            _upcomingDraws = await Http.GetFromJsonAsync<List<UpcomingDrawDTO>>("api/admin/draws/upcoming?count=5");
-            
-            // Carregar rifas mais vendidas
-            _topRifas = await Http.GetFromJsonAsync<List<TopSellingRifaDTO>>("api/admin/rifas/top-selling?count=5");
-            
-            Logger.LogInformation("Estatísticas do dashboard carregadas com sucesso");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Erro ao carregar estatísticas do dashboard");
-            Snackbar.Add("Erro ao carregar dados do dashboard. Tente novamente mais tarde.", Severity.Error);
-            _stats = null;
-        }
-        finally
-        {
-            _loading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task ShowDeleteDialog(TopSellingRifaDTO rifa)
-    {
-        var parameters = new DialogParameters
-        {
-            { "ContentText", $"Tem certeza que deseja excluir a rifa '{rifa.Name}'? Esta ação não pode ser desfeita." },
-            { "ButtonText", "Excluir" },
-            { "Color", Color.Error }
-        };
-
-        var options = new DialogOptions() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraSmall };
-        var dialogReference = DialogService.Show<ConfirmDialog>("Confirmar Exclusão", parameters, options);
-        var result = await dialogReference.Result;
-
-        if (!result.Canceled)
-        {
-            try
-            {
-                var response = await Http.DeleteAsync($"api/rifas/{rifa.Id}");
-                if (response.IsSuccessStatusCode)
-                {
-                    Snackbar.Add("Rifa excluída com sucesso!", Severity.Success);
-                    // Recarregar dados
-                    await LoadDashboardStats();
-                }
-                else
-                {
-                    Snackbar.Add("Erro ao excluir rifa.", Severity.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, $"Erro ao excluir rifa {rifa.Id}");
-                Snackbar.Add("Erro ao excluir rifa. Tente novamente mais tarde.", Severity.Error);
-            }
-        }
-    }
-
-    private string GetNameInitials(string name)
-    {
-        if (string.IsNullOrEmpty(name)) return "?";
-
-        var parts = name.Split(' ');
-        if (parts.Length > 1)
-        {
-            // Check each part length before accessing index
-            if (parts[0].Length > 0 && parts[1].Length > 0)
-                return $"{parts[0][0]}{parts[1][0]}";
-            else if (parts[0].Length > 0)
-                return parts[0][0].ToString();
-            else
-                return "?";
-        }
-
-        // Check if the first part has any characters
-        return parts[0].Length > 0 ? parts[0][0].ToString() : "?";
-    }
-
-    private Color GetProgressColor(decimal percentage)
-    {
-        if (percentage < 30m) return Color.Success;
-        if (percentage < 70m) return Color.Warning;
-        return Color.Error;
-    }
-
-    private string FormatCurrency(decimal value)
-    {
-        return value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
-    }
-
-    private string FormatDate(DateTime date)
-    {
-        return date.ToString("dd/MM/yyyy");
-    }
-
-    private string FormatDateTime(DateTime date)
-    {
-        return date.ToString("dd/MM/yyyy HH:mm");
-    }
 }
 else if (_stats == null)
 {
@@ -389,4 +262,185 @@ else
         Última atualização: @FormatDateTime(_stats.LastUpdated)
     </MudText>
 }
+}
+
+@code {
+    private bool _loading = true;
+    private AdminDashboardStatsDTO _stats;
+    private List<RecentTicketSaleDTO> _recentSales;
+    private List<UpcomingDrawDTO> _upcomingDraws;
+    private List<TopSellingRifaDTO> _topRifas;
+    private bool _isRendered = false;
+    private CancellationTokenSource _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("Inicializando dashboard administrativo");
+        // Não carregamos dados aqui, apenas iniciamos o estado
+        _loading = true;
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isRendered = true;
+            // Agora é seguro carregar os dados
+            await LoadDashboardStats();
+        }
+    }
+    private async Task LoadDashboardStats()
+    {
+        try
+        {
+            // Cancelar qualquer operação anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            _loading = true;
+            StateHasChanged();
+
+            Logger.LogInformation("Carregando estatísticas do dashboard");
+
+            // Adicionar timeout para evitar esperas muito longas
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+            // Usar Tasks em paralelo para carregar dados mais rapidamente
+            // Usar os métodos de extensão que ajustam automaticamente os endpoints
+            var statsTask = Http.GetFromJsonAsyncAdjusted<AdminDashboardStatsDTO>(AppConfig.Api.Endpoints.AdminStats, linkedCts.Token);
+            var salesTask = Http.GetFromJsonAsyncAdjusted<List<RecentTicketSaleDTO>>(AppConfig.Api.Endpoints.AdminRecentSales + "?count=5", linkedCts.Token);
+            var drawsTask = Http.GetFromJsonAsyncAdjusted<List<UpcomingDrawDTO>>(AppConfig.Api.Endpoints.AdminUpcomingDraws + "?count=5", linkedCts.Token);
+            var rifasTask = Http.GetFromJsonAsyncAdjusted<List<TopSellingRifaDTO>>(AppConfig.Api.Endpoints.AdminTopSellingRifas + "?count=5", linkedCts.Token);
+
+            // Aguardar todas as tasks completarem
+            await Task.WhenAll(statsTask, salesTask, drawsTask, rifasTask);
+
+            // Recuperar resultados
+            _stats = await statsTask;
+            _recentSales = await salesTask;
+            _upcomingDraws = await drawsTask;
+            _topRifas = await rifasTask;
+
+            Logger.LogInformation("Estatísticas do dashboard carregadas com sucesso");
+        }
+        catch (TaskCanceledException)
+        {
+            Logger.LogWarning("Carregamento do dashboard cancelado");
+            Snackbar.Add("A operação foi cancelada. Tente novamente.", Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao carregar estatísticas do dashboard");
+            Snackbar.Add("Erro ao carregar dados do dashboard. Tente novamente mais tarde.", Severity.Error);
+            _stats = null;
+            _recentSales = new List<RecentTicketSaleDTO>();
+            _upcomingDraws = new List<UpcomingDrawDTO>();
+            _topRifas = new List<TopSellingRifaDTO>();
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+    private async Task ShowDeleteDialog(TopSellingRifaDTO rifa)
+    {
+        if (!_isRendered) return;
+
+        var parameters = new DialogParameters
+        {
+            { "ContentText", $"Tem certeza que deseja excluir a rifa '{rifa.Name}'? Esta ação não pode ser desfeita." },
+            { "ButtonText", "Excluir" },
+            { "Color", Color.Error }
+        };
+
+        var options = new DialogOptions() { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialogReference = DialogService.Show<ConfirmDialog>("Confirmar Exclusão", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            try
+            {
+                // Cancelar qualquer operação anterior
+                _cts?.Cancel();
+                _cts = new CancellationTokenSource();
+
+                // Adicionar timeout para evitar esperas muito longas
+                var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+                var response = await Http.DeleteAsync($"api/rifas/{rifa.Id}", linkedCts.Token);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Rifa excluída com sucesso!", Severity.Success);
+                    // Recarregar dados
+                    await LoadDashboardStats();
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Snackbar.Add($"Erro ao excluir rifa: {response.StatusCode}. {errorContent}", Severity.Error);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                Snackbar.Add("A operação foi cancelada. Tente novamente.", Severity.Warning);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Erro ao excluir rifa {rifa.Id}");
+                Snackbar.Add("Erro ao excluir rifa. Tente novamente mais tarde.", Severity.Error);
+            }
+        }
+    }
+
+    // Métodos utilitários permanecem iguais
+    private string GetNameInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "?";
+
+        var parts = name.Split(' ');
+        if (parts.Length > 1)
+        {
+            // Check each part length before accessing index
+            if (parts[0].Length > 0 && parts[1].Length > 0)
+                return $"{parts[0][0]}{parts[1][0]}";
+            else if (parts[0].Length > 0)
+                return parts[0][0].ToString();
+            else
+                return "?";
+        }
+
+        // Check if the first part has any characters
+        return parts[0].Length > 0 ? parts[0][0].ToString() : "?";
+    }
+
+    private Color GetProgressColor(decimal percentage)
+    {
+        if (percentage < 30m) return Color.Success;
+        if (percentage < 70m) return Color.Warning;
+        return Color.Error;
+    }
+
+    private string FormatCurrency(decimal value)
+    {
+        return value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+    }
+
+    private string FormatDate(DateTime date)
+    {
+        return date.ToString("dd/MM/yyyy");
+    }
+
+    private string FormatDateTime(DateTime date)
+    {
+        return date.ToString("dd/MM/yyyy HH:mm");
+    }
+    // Implementar IDisposable para cancelar operações pendentes
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
 }

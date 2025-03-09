@@ -7,7 +7,6 @@ using RifaTech.UI.Shared.Config;
 using RifaTech.UI.Shared.Services;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ILocalStorageService = RifaTech.UI.Shared.Services.ILocalStorageService;
 
 namespace RifaTech.UI
 {
@@ -26,7 +25,6 @@ namespace RifaTech.UI
 
             // Registrar Local Storage
             builder.Services.AddBlazoredLocalStorage();
-            builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 
             // Registrar MudBlazor
             builder.Services.AddMudServices(config =>
@@ -61,8 +59,13 @@ namespace RifaTech.UI
             // Configurar Autenticação
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddAuthorizationCore();
-            builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
+
+            // Adicionar serviços de suporte
             builder.Services.AddScoped<ClienteRecorrenteService>();
+            builder.Services.AddBlazoredLocalStorage();
+            builder.Services.AddScoped<IStorageService, BrowserStorageService>();
+
+            // Serviços MAUI específicos
             builder.Services.AddMauiBlazorWebView();
 
 #if DEBUG

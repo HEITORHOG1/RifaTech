@@ -84,24 +84,68 @@
     private int _currentPage = 1;
     private int _pageSize = AppConfig.UI.DefaultPageSize; // Usando a configuração centralizada
     private int _totalPages = 1;
+    private bool _isFirstLoad = true;
+    private CancellationTokenSource _cts;
 
+    // Adicionamos um método que será chamado apenas após a renderização inicial
     protected override async Task OnInitializedAsync()
     {
-        await LoadRifas();
+        // Não carregamos dados aqui para evitar erros de JS interop durante pré-renderização
+        // Apenas configuramos o estado inicial do componente
+        _loading = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Agora é seguro carregar dados, pois estamos após a renderização inicial
+            await LoadRifas();
+        }
     }
 
     private async Task LoadRifas()
     {
         try
         {
-            _loading = true;
+            // Cancelamos qualquer operação anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
 
-            // Usando AppConfig para a URL base do endpoint
+            _loading = true;
+            StateHasChanged(); // Notificar UI que estamos carregando
+
+            // Construímos a URL do endpoint com parâmetros de forma segura
+            var queryParams = new List<string>
+            {
+                $"pageNumber={_currentPage}",
+                $"pageSize={_pageSize}"
+            };
+
+            if (!string.IsNullOrWhiteSpace(_searchTerm))
+            {
+                queryParams.Add($"searchTerm={Uri.EscapeDataString(_searchTerm)}");
+            }
+
+            if (_startDate.HasValue)
+            {
+                queryParams.Add($"startDate={_startDate.Value.ToString("yyyy-MM-dd")}");
+            }
+
+            if (_endDate.HasValue)
+            {
+                queryParams.Add($"endDate={_endDate.Value.ToString("yyyy-MM-dd")}");
+            }
+
+            var endpoint = $"{AppConfig.Api.Endpoints.RifasPaginated}?{string.Join("&", queryParams)}";
+
+            // Adicionamos um timeout para evitar esperas muito longas
+            var timeoutToken = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutToken.Token);
+
             var response = await Http.GetFromJsonAsync<PaginatedResult<RifaDTO>>(
-                $"{AppConfig.Api.Endpoints.RifasPaginated}?pageNumber={_currentPage}&pageSize={_pageSize}" +
-                $"&searchTerm={Uri.EscapeDataString(_searchTerm)}" +
-                $"&startDate={(_startDate.HasValue ? _startDate.Value.ToString("yyyy-MM-dd") : "")}" +
-                $"&endDate={(_endDate.HasValue ? _endDate.Value.ToString("yyyy-MM-dd") : "")}"
+                endpoint,
+                linkedCts.Token
             );
 
             if (response != null)
@@ -109,14 +153,27 @@
                 _rifas = response.Items.ToList();
                 _totalPages = (int)Math.Ceiling(response.TotalCount / (double)_pageSize);
             }
+            else
+            {
+                _rifas = new List<RifaDTO>();
+                _totalPages = 0;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Requisição foi cancelada, não fazemos nada
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Erro ao carregar rifas: {ex.Message}", Severity.Error);
+            _rifas = new List<RifaDTO>();
+            _totalPages = 0;
         }
         finally
         {
             _loading = false;
+            _isFirstLoad = false;
+            StateHasChanged(); // Notificar UI que terminamos de carregar
         }
     }
 
@@ -128,8 +185,15 @@
 
     private async Task ApplyFilters()
     {
-        _currentPage = 1;
+        _currentPage = 1; // Voltar à primeira página quando filtros são aplicados
         await LoadRifas();
+    }
+
+    // Garantimos que a classe seja limpa adequadamente
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 
     public class PaginatedResult<T>

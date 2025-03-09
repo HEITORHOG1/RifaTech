@@ -233,13 +233,14 @@ else
     protected override async Task OnInitializedAsync()
     {
         await LoadRifa();
-        await CarregarClienteRecorrente();
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             _isRendered = true;
+            // Informamos ao serviço que a renderização ocorreu
+            ClienteRecorrenteService.SetRendered();
             await CarregarClienteRecorrente();
             StateHasChanged();
         }
@@ -265,6 +266,7 @@ else
     {
         try
         {
+            // Este método agora só será executado após a renderização e é seguro
             var cliente = await ClienteRecorrenteService.ObterClienteRecorrenteAsync();
             if (cliente != null)
             {
@@ -272,6 +274,7 @@ else
                 _compraRapida.Email = cliente.Email;
                 _compraRapida.PhoneNumber = cliente.PhoneNumber;
                 _clienteExistente = true;
+                StateHasChanged();
             }
         }
         catch (Exception)

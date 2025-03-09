@@ -17,6 +17,7 @@ namespace RifaTech.UI.Shared.Helpers
         private readonly IJSRuntime _jsRuntime;
         private readonly bool _isEnabled;
         private readonly string _componentName;
+        private bool _isJsAvailable = false;
 
         public LogHelper(IJSRuntime jsRuntime, string componentName, bool isEnabled = true)
         {
@@ -25,13 +26,38 @@ namespace RifaTech.UI.Shared.Helpers
             _componentName = componentName;
         }
 
+        private async Task EnsureJsAvailableAsync()
+        {
+            if (_isJsAvailable) return;
+
+            try
+            {
+                // Tentamos uma chamada simples para verificar se o JS está disponível
+                await _jsRuntime.InvokeVoidAsync("console.log", "LogHelper initialization check");
+                _isJsAvailable = true;
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
+            {
+                // JS ainda não está disponível (provavelmente pré-renderização)
+                _isJsAvailable = false;
+            }
+            catch (Exception)
+            {
+                // Qualquer outro erro, consideramos que JS não está disponível
+                _isJsAvailable = false;
+            }
+        }
+
         /// <summary>
-        /// Escreve uma mensagem de log no console do navegador
+        /// Escreve uma mensagem de log no console do navegador de forma segura
         /// </summary>
         public async Task LogAsync(string message, LogLevel level = LogLevel.Info,
             [CallerMemberName] string caller = "", [CallerLineNumber] int lineNumber = 0)
         {
             if (!_isEnabled) return;
+
+            await EnsureJsAvailableAsync();
+            if (!_isJsAvailable) return; // Skip logging during prerendering
 
             string prefix = GetLogLevelPrefix(level);
             string timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
@@ -57,12 +83,15 @@ namespace RifaTech.UI.Shared.Helpers
         }
 
         /// <summary>
-        /// Escreve um objeto como JSON no console
+        /// Escreve um objeto como JSON no console de forma segura
         /// </summary>
         public async Task LogObjectAsync(string message, object data, LogLevel level = LogLevel.Info,
             [CallerMemberName] string caller = "", [CallerLineNumber] int lineNumber = 0)
         {
             if (!_isEnabled) return;
+
+            await EnsureJsAvailableAsync();
+            if (!_isJsAvailable) return; // Skip logging during prerendering
 
             try
             {
@@ -81,12 +110,15 @@ namespace RifaTech.UI.Shared.Helpers
         }
 
         /// <summary>
-        /// Escreve uma exceção no console
+        /// Escreve uma exceção no console de forma segura
         /// </summary>
         public async Task LogExceptionAsync(Exception exception, string message = "Erro",
             [CallerMemberName] string caller = "", [CallerLineNumber] int lineNumber = 0)
         {
             if (!_isEnabled) return;
+
+            await EnsureJsAvailableAsync();
+            if (!_isJsAvailable) return; // Skip logging during prerendering
 
             string exceptionDetails = $"{message}: {exception.Message}";
             if (exception.InnerException != null)
@@ -99,7 +131,7 @@ namespace RifaTech.UI.Shared.Helpers
         }
 
         /// <summary>
-        /// Inicia um timer para medir tempo de execução
+        /// Inicia um timer para medir tempo de execução de forma segura
         /// </summary>
         public async Task<IAsyncDisposable> TimeOperationAsync(string operationName,
             [CallerMemberName] string caller = "")
@@ -109,8 +141,15 @@ namespace RifaTech.UI.Shared.Helpers
                 return new NullTimerScope();
             }
 
+            await EnsureJsAvailableAsync();
+            if (!_isJsAvailable)
+            {
+                return new NullTimerScope();
+            }
+
             return new TimerScope(_jsRuntime, operationName, _componentName, caller);
         }
+
 
         private string GetLogLevelPrefix(LogLevel level)
         {
