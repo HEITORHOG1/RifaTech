@@ -1,10 +1,13 @@
 ﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.IdentityModel.Tokens;
 using MudBlazor;
 using MudBlazor.Services;
 using RifaTech.UI.Shared.Config;
 using RifaTech.UI.Shared.Services;
 using RifaTech.UI.Web.Components;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -15,7 +18,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents();
 
-// Registrar Local Storage (remover duplicata)
+// Registrar Local Storage
 builder.Services.AddBlazoredLocalStorage();
 
 // Configurar HttpClient usando AppConfig
@@ -23,15 +26,12 @@ builder.Services.AddScoped(sp =>
 {
     // Obter a URL base da configuração
     var apiUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? AppConfig.Api.BaseUrl;
-
     // Log para depuração
     Console.WriteLine($"Configurando HttpClient com BaseAddress: {apiUrl}");
-
     var httpClient = new HttpClient
     {
         BaseAddress = new Uri(apiUrl)
     };
-
     return httpClient;
 });
 
@@ -47,14 +47,30 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 500;
 });
 
-// Configurar Autenticação
+// Configurar Autenticação e Autorização
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "RifaTech",
+            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "RifaTechUsers",
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "SuaChaveSecretaTemporariaDeveSerSubstituida"))
+        };
+    });
+builder.Services.AddAuthorization();
+
+// Configurar serviços de autenticação personalizada
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddAuthorizationCore();
 
 // Registrar os serviços de forma correta (evitar duplicatas)
-
 builder.Services.AddScoped<ClienteRecorrenteService>();
-builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<IStorageService, BrowserStorageService>();
 
 var app = builder.Build();
@@ -73,6 +89,10 @@ else
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
+
+// Importante: Adicionar middleware de autenticação e autorização na ordem correta
+app.UseAuthentication(); // Adicionar isso
+app.UseAuthorization();  // Já existente ou adicionar se não tiver
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

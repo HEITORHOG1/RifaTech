@@ -14,5 +14,11 @@ namespace RifaTech.DTOs.Contracts
         Task<LoginResponse> RefreshTokenAsync(string refreshToken);
 
         Task<IEnumerable<UserInfoDTO>> GetAllUsersAsync();
+
+        // Novos métodos
+        Task<UserDTO> GetUserByIdAsync(string id);
+        Task<UserDTO> UpdateUserAsync(string id, UserDTO userDTO);
+        Task<bool> DeleteUserAsync(string id);
+        Task<UserDTO> UpdateUserRoleAsync(string id, string role);
     }
 }

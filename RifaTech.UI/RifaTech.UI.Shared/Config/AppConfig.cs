@@ -86,6 +86,13 @@ namespace RifaTech.UI.Shared.Config
 
                 // Webhooks
                 public const string MercadoPagoWebhook = "/webhooks/mercadopago";
+
+                // Adicionar na seção de Auth/Users em AppConfig.cs
+                public const string UserById = "/manage/users/{0}"; // Para operações em um usuário específico
+                public const string UpdateUserRole = "/manage/users/{0}/role"; // Para atualizar o papel de um usuário
+                public const string DeleteUser = "/manage/users/{0}"; // Para DELETE de um usuário
+                public const string UpdateUser = "/manage/users/{0}"; // Para UPDATE de um usuário
+
             }
         }
 

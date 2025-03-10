@@ -26,5 +26,9 @@ namespace RifaTech.DTOs.DTOs
         public string? CPF { get; set; } = string.Empty;
 
         public bool EhAdmin { get; set; } = false;
+
+        public bool Ativo { get; set; } = false;
+
+        public DateTime? DataCriacao { get; set; }
     }
 }

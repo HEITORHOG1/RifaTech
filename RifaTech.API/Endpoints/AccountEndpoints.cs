@@ -87,24 +87,119 @@ namespace RifaTech.API.Endpoints
             });
 
             app.MapGet("/manage/users", async (IUserAccount authService) =>
+            {
+                try
                 {
-                    try
-                    {
-                        var users = await authService.GetAllUsersAsync();
-                        return Results.Ok(users);
-                    }
-                    catch (Exception ex)
-                    {
-                        return Results.Problem(ex.Message);
-                    }
-                })
-                .WithName("GetAllUsers")
-                .WithOpenApi(x => new OpenApiOperation(x)
+                    var users = await authService.GetAllUsersAsync();
+                    return Results.Ok(users);
+                }
+                catch (Exception ex)
                 {
-                    Summary = "Obter Todos os Usuários",
-                    Description = "Retorna uma lista de todos os usuários.",
-                    Tags = new List<OpenApiTag> { new() { Name = "Manage" } }
-                });
+                    return Results.Problem(ex.Message);
+                }
+            })
+            .WithName("GetAllUsers")
+            .RequireAuthorization(policy => policy.RequireRole("Admin"))
+            .WithOpenApi(x => new OpenApiOperation(x)
+            {
+                Summary = "Obter Todos os Usuários",
+                Description = "Retorna uma lista de todos os usuários.",
+                Tags = new List<OpenApiTag> { new() { Name = "Manage" } }
+            });
+
+            // NOVO ENDPOINT: Obter um usuário específico por ID
+            app.MapGet("/manage/users/{id}", async (string id, IUserAccount authService) =>
+            {
+                try
+                {
+                    var user = await authService.GetUserByIdAsync(id);
+                    return user != null ? Results.Ok(user) : Results.NotFound($"Usuário com ID {id} não encontrado");
+                }
+                catch (Exception ex)
+                {
+                    return Results.Problem(ex.Message);
+                }
+            })
+            .WithName("GetUserById")
+            .RequireAuthorization(policy => policy.RequireRole("Admin"))
+            .WithOpenApi(x => new OpenApiOperation(x)
+            {
+                Summary = "Obter Usuário por ID",
+                Description = "Retorna um usuário específico pelo ID.",
+                Tags = new List<OpenApiTag> { new() { Name = "Manage" } }
+            });
+
+            // NOVO ENDPOINT: Atualizar um usuário existente
+            app.MapPut("/manage/users/{id}", async (string id, UserDTO userDTO, IUserAccount authService) =>
+            {
+                try
+                {
+                    var updated = await authService.UpdateUserAsync(id, userDTO);
+                    return updated != null ?
+                        Results.Ok(updated) :
+                        Results.NotFound($"Usuário com ID {id} não encontrado");
+                }
+                catch (Exception ex)
+                {
+                    return Results.Problem(ex.Message);
+                }
+            })
+            .WithName("UpdateUser")
+            .RequireAuthorization(policy => policy.RequireRole("Admin"))
+            .WithOpenApi(x => new OpenApiOperation(x)
+            {
+                Summary = "Atualizar Usuário",
+                Description = "Atualiza os dados de um usuário existente.",
+                Tags = new List<OpenApiTag> { new() { Name = "Manage" } }
+            });
+
+            // NOVO ENDPOINT: Excluir um usuário
+            app.MapDelete("/manage/users/{id}", async (string id, IUserAccount authService) =>
+            {
+                try
+                {
+                    var result = await authService.DeleteUserAsync(id);
+                    return result ?
+                        Results.Ok(new { success = true, message = "Usuário excluído com sucesso" }) :
+                        Results.NotFound($"Usuário com ID {id} não encontrado");
+                }
+                catch (Exception ex)
+                {
+                    return Results.Problem(ex.Message);
+                }
+            })
+            .WithName("DeleteUser")
+            .RequireAuthorization(policy => policy.RequireRole("Admin"))
+            .WithOpenApi(x => new OpenApiOperation(x)
+            {
+                Summary = "Excluir Usuário",
+                Description = "Remove um usuário existente.",
+                Tags = new List<OpenApiTag> { new() { Name = "Manage" } }
+            });
+
+            // NOVO ENDPOINT: Atualizar papel/função de um usuário
+            app.MapPut("/manage/users/{id}/role", async (string id, RoleUpdateDTO roleUpdate, IUserAccount authService) =>
+            {
+                try
+                {
+                    var updated = await authService.UpdateUserRoleAsync(id, roleUpdate.Role);
+                    return updated != null ?
+                        Results.Ok(updated) :
+                        Results.NotFound($"Usuário com ID {id} não encontrado");
+                }
+                catch (Exception ex)
+                {
+                    return Results.Problem(ex.Message);
+                }
+            })
+            .WithName("UpdateUserRole")
+            .RequireAuthorization(policy => policy.RequireRole("Admin"))
+            .WithOpenApi(x => new OpenApiOperation(x)
+            {
+                Summary = "Atualizar Função do Usuário",
+                Description = "Atualiza a função/papel de um usuário existente.",
+                Tags = new List<OpenApiTag> { new() { Name = "Manage" } }
+            });
         }
     }
 }

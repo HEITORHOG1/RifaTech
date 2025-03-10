@@ -132,8 +132,8 @@ namespace RifaTech.API.Repositories
             var userInfo = new UserInfoDTO
             {
                 Email = user.Email,
-
                 IsEmailConfirmed = Equals(user.EmailConfirmed, true),
+                Name = user.Name
             };
 
             return userInfo;
@@ -178,6 +178,162 @@ namespace RifaTech.API.Repositories
                 IsEmailConfirmed = u.EmailConfirmed,
                 Name = u.Name
             });
+        }
+
+        // MÉTODOS NOVOS
+
+        // 1. Obter um usuário pelo ID
+        public async Task<UserDTO> GetUserByIdAsync(string id)
+        {
+            try
+            {
+                var user = await userManager.FindByIdAsync(id);
+                if (user == null)
+                {
+                    return null;
+                }
+
+                var roles = await userManager.GetRolesAsync(user);
+
+                return new UserDTO
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    CPF = user.CPF,
+                    EhAdmin = user.EhAdmin || roles.Contains("Admin"),
+                    Ativo = user.EmailConfirmed, // Presumindo que um usuário ativo tem o email confirmado
+                };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        // 2. Atualizar um usuário existente
+        public async Task<UserDTO> UpdateUserAsync(string id, UserDTO userDTO)
+        {
+            try
+            {
+                var user = await userManager.FindByIdAsync(id);
+                if (user == null)
+                {
+                    return null;
+                }
+
+                // Atualizar propriedades
+                user.Name = userDTO.Name;
+                user.Email = userDTO.Email;
+                user.UserName = userDTO.Email; // Assumindo que o username é igual ao email
+                user.CPF = userDTO.CPF;
+                user.EhAdmin = userDTO.EhAdmin;
+                user.EmailConfirmed = userDTO.Ativo; // Atualizando o status ativo
+
+                // Atualizar senha se fornecida
+                if (!string.IsNullOrEmpty(userDTO.Password))
+                {
+                    var token = await userManager.GeneratePasswordResetTokenAsync(user);
+                    var result = await userManager.ResetPasswordAsync(user, token, userDTO.Password);
+                    if (!result.Succeeded)
+                    {
+                        return null;
+                    }
+                }
+
+                // Salvar alterações
+                var updateResult = await userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    return null;
+                }
+
+                // Atualizar papéis/funções, se EhAdmin mudou
+                var currentRoles = await userManager.GetRolesAsync(user);
+                if (userDTO.EhAdmin && !currentRoles.Contains("Admin"))
+                {
+                    // Remover papel "User" se existir
+                    if (currentRoles.Contains("User"))
+                    {
+                        await userManager.RemoveFromRoleAsync(user, "User");
+                    }
+                    // Adicionar papel "Admin"
+                    await userManager.AddToRoleAsync(user, "Admin");
+                }
+                else if (!userDTO.EhAdmin && currentRoles.Contains("Admin"))
+                {
+                    // Remover papel "Admin"
+                    await userManager.RemoveFromRoleAsync(user, "Admin");
+                    // Adicionar papel "User"
+                    await userManager.AddToRoleAsync(user, "User");
+                }
+
+                // Retornar o usuário atualizado
+                return await GetUserByIdAsync(id);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        // 3. Excluir um usuário
+        public async Task<bool> DeleteUserAsync(string id)
+        {
+            try
+            {
+                var user = await userManager.FindByIdAsync(id);
+                if (user == null)
+                {
+                    return false;
+                }
+
+                // Remover o usuário
+                var result = await userManager.DeleteAsync(user);
+                return result.Succeeded;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        // 4. Atualizar o papel/função de um usuário
+        public async Task<UserDTO> UpdateUserRoleAsync(string id, string role)
+        {
+            try
+            {
+                var user = await userManager.FindByIdAsync(id);
+                if (user == null)
+                {
+                    return null;
+                }
+
+                // Verificar se o papel/função existe
+                var roleExists = await roleManager.RoleExistsAsync(role);
+                if (!roleExists)
+                {
+                    return null;
+                }
+
+                // Remover todos os papéis existentes
+                var currentRoles = await userManager.GetRolesAsync(user);
+                await userManager.RemoveFromRolesAsync(user, currentRoles);
+
+                // Adicionar o novo papel
+                await userManager.AddToRoleAsync(user, role);
+
+                // Atualizar o campo EhAdmin com base no papel
+                user.EhAdmin = role == "Admin";
+                await userManager.UpdateAsync(user);
+
+                // Retornar o usuário atualizado
+                return await GetUserByIdAsync(id);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }
