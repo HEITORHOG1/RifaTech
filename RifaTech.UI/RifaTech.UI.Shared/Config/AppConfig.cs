@@ -24,17 +24,22 @@ namespace RifaTech.UI.Shared.Config
                 public const string RifaById = "/rifas/{0}"; // Formato: /rifas/guid
                 public const string RifasPaginated = "/rifas/paginated";
                 public const string RifasDestaque = "/rifas/destaque";
+                public const string RifaMetrics = "/rifas/metrics";
+                public const string RifaMarkAsDeleted = "/rifas/{0}/mark-as-deleted"; // Formato: /rifas/guid/mark-as-deleted
 
                 // Tickets
                 public const string Tickets = "/tickets";
                 public const string TicketsByRifa = "/rifa/{0}/tickets"; // Formato: /rifa/guid/tickets
                 public const string TicketById = "/ticket/{0}"; // Formato: /ticket/guid
                 public const string BuyTicket = "/rifa/{0}/buy-ticket"; // Formato: /rifa/guid/buy-ticket
+                public const string MyTickets = "/tickets/meus";
+                public const string CancelTicket = "/ticket/{0}"; // Formato para DELETE: /ticket/guid
 
                 // Clientes
                 public const string Clientes = "/clientes";
                 public const string ClienteById = "/clientes/{0}"; // Formato: /clientes/guid
                 public const string ClienteLookup = "/clientes/lookup"; // Busca por email, telefone ou CPF
+                public const string ClienteByEmailPhoneCpf = "/clientes/{0}/{1}/{2}"; // Formato: /clientes/email/phone/cpf
 
                 // Pagamentos
                 public const string Payments = "/payments";
@@ -47,7 +52,7 @@ namespace RifaTech.UI.Shared.Config
 
                 // Autenticação
                 public const string Auth = "/manage";
-                public const string Login = "/manage/login";  // Remover o / do início
+                public const string Login = "/manage/login";
                 public const string Register = "/manage/register";
                 public const string RefreshToken = "/manage/refresh-token";
                 public const string UserInfo = "/manage/info";
@@ -59,6 +64,28 @@ namespace RifaTech.UI.Shared.Config
                 public const string AdminTopSellingRifas = "/admin/rifas/top-selling";
                 public const string AdminRecentSales = "/admin/tickets/recent-sales";
                 public const string AdminUpcomingDraws = "/admin/draws/upcoming";
+
+                // Draw (Sorteios)
+                public const string Draws = "/draws";
+                public const string DrawById = "/draw/{0}"; // Formato: /draw/guid
+                public const string CreateDraw = "/rifa/{0}/draw"; // Formato: /rifa/guid/draw
+
+                // Draw Management
+                public const string ExecuteDraw = "/admin/draws/execute/{0}"; // Formato: /admin/draws/execute/guid
+                public const string DrawHistory = "/admin/draws/history";
+                public const string DrawPreview = "/admin/draws/preview/{0}"; // Formato: /admin/draws/preview/guid
+                public const string ScheduleDraw = "/admin/draws/schedule";
+                public const string CancelDraw = "/admin/draws/cancel/{0}"; // Formato: /admin/draws/cancel/guid
+
+                // Extra Numbers
+                public const string ExtraNumbersByRifa = "/rifas/{0}/extra-numbers"; // Formato: /rifas/guid/extra-numbers
+                public const string AddExtraNumber = "/rifas/{0}/extra-number"; // Formato: /rifas/guid/extra-number
+
+                // Unpaid Rifas
+                public const string UnpaidRifas = "/unpaidrifas";
+
+                // Webhooks
+                public const string MercadoPagoWebhook = "/webhooks/mercadopago";
             }
         }
 

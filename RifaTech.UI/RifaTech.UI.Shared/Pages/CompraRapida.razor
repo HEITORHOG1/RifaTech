@@ -230,6 +230,7 @@ else
     private bool _processando = false;
     private bool _clienteExistente = false;
     private bool _isRendered = false;
+    private CancellationTokenSource _cts;
     protected override async Task OnInitializedAsync()
     {
         await LoadRifa();
@@ -250,7 +251,18 @@ else
         try
         {
             _loading = true;
-            _rifa = await Http.GetFromJsonAsync<RifaDTO>($"api/rifas/{Id}");
+
+            // Cancelar qualquer carregamento anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            // Adicionar timeout para evitar esperas muito longas
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+            // Usando o endpoint centralizado do AppConfig
+            string endpoint = string.Format(AppConfig.Api.Endpoints.RifaById, Id);
+            _rifa = await Http.GetFromJsonAsync<RifaDTO>(endpoint, linkedCts.Token);
         }
         catch (Exception ex)
         {
@@ -304,12 +316,21 @@ else
 
         try
         {
-            // Realizar a compra rápida
-            var response = await Http.PostAsJsonAsync($"api/compra-rapida/{Id}", _compraRapida);
+            // Cancelar qualquer operação anterior
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            // Adicionar timeout para evitar esperas muito longas
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // Operação de compra pode demorar mais
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
+
+            // Realizar a compra rápida usando endpoint centralizado do AppConfig
+            string endpoint = string.Format(AppConfig.Api.Endpoints.CompraRapida, Id);
+            var response = await Http.PostAsJsonAsync(endpoint, _compraRapida, linkedCts.Token);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<CompraRapidaResponseDTO>();
+                var result = await response.Content.ReadFromJsonAsync<CompraRapidaResponseDTO>(cancellationToken: linkedCts.Token);
 
                 // Salvar cliente para compras futuras
                 if (result.Cliente != null)
@@ -334,6 +355,10 @@ else
                 throw new Exception($"Erro ao processar compra: {error}");
             }
         }
+        catch (TaskCanceledException)
+        {
+            Snackbar.Add("A operação foi cancelada. Tente novamente.", Severity.Warning);
+        }
         catch (Exception ex)
         {
             Snackbar.Add($"Erro: {ex.Message}", Severity.Error);
@@ -341,18 +366,25 @@ else
         finally
         {
             _processando = false;
+            StateHasChanged();
         }
     }
 
     private string GetRifaImage()
     {
         return string.IsNullOrEmpty(_rifa.Base64Img)
-            ? "/images/default-rifa.jpg"
+            ? AppConfig.UI.DefaultImagePath
             : $"data:image/png;base64,{_rifa.Base64Img}";
     }
 
     private string FormatCurrency(decimal value)
     {
-        return value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+        return value.ToString(AppConfig.Formatting.CurrencyFormat,
+            System.Globalization.CultureInfo.GetCultureInfo(AppConfig.Formatting.CurrencyCulture));
+    }
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 }

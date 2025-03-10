@@ -306,11 +306,11 @@ else
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
 
             // Usar Tasks em paralelo para carregar dados mais rapidamente
-            // Usar os métodos de extensão que ajustam automaticamente os endpoints
-            var statsTask = Http.GetFromJsonAsyncAdjusted<AdminDashboardStatsDTO>(AppConfig.Api.Endpoints.AdminStats, linkedCts.Token);
-            var salesTask = Http.GetFromJsonAsyncAdjusted<List<RecentTicketSaleDTO>>(AppConfig.Api.Endpoints.AdminRecentSales + "?count=5", linkedCts.Token);
-            var drawsTask = Http.GetFromJsonAsyncAdjusted<List<UpcomingDrawDTO>>(AppConfig.Api.Endpoints.AdminUpcomingDraws + "?count=5", linkedCts.Token);
-            var rifasTask = Http.GetFromJsonAsyncAdjusted<List<TopSellingRifaDTO>>(AppConfig.Api.Endpoints.AdminTopSellingRifas + "?count=5", linkedCts.Token);
+            // Usar os endpoints centralizados do AppConfig
+            var statsTask = Http.GetFromJsonAsync<AdminDashboardStatsDTO>(AppConfig.Api.Endpoints.AdminStats, linkedCts.Token);
+            var salesTask = Http.GetFromJsonAsync<List<RecentTicketSaleDTO>>(AppConfig.Api.Endpoints.AdminRecentSales + "?count=5", linkedCts.Token);
+            var drawsTask = Http.GetFromJsonAsync<List<UpcomingDrawDTO>>(AppConfig.Api.Endpoints.AdminUpcomingDraws + "?count=5", linkedCts.Token);
+            var rifasTask = Http.GetFromJsonAsync<List<TopSellingRifaDTO>>(AppConfig.Api.Endpoints.AdminTopSellingRifas + "?count=5", linkedCts.Token);
 
             // Aguardar todas as tasks completarem
             await Task.WhenAll(statsTask, salesTask, drawsTask, rifasTask);
@@ -370,7 +370,10 @@ else
                 var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
 
-                var response = await Http.DeleteAsync($"api/rifas/{rifa.Id}", linkedCts.Token);
+                // Usar o endpoint centralizado para marcar a rifa como deletada
+                string endpoint = string.Format(AppConfig.Api.Endpoints.RifaMarkAsDeleted, rifa.Id);
+                var response = await Http.PatchAsync(endpoint, null, linkedCts.Token);
+
                 if (response.IsSuccessStatusCode)
                 {
                     Snackbar.Add("Rifa excluída com sucesso!", Severity.Success);
@@ -394,6 +397,7 @@ else
             }
         }
     }
+
 
     // Métodos utilitários permanecem iguais
     private string GetNameInitials(string name)

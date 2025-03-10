@@ -120,8 +120,12 @@ else
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
 
             // Usar Tasks em paralelo para carregar dados mais rapidamente
-            var rifaTask = Http.GetFromJsonAsync<RifaDTO>($"api/rifas/{Id}", linkedCts.Token);
-            var ticketsTask = Http.GetFromJsonAsync<List<TicketDTO>>($"api/rifa/{Id}/tickets", linkedCts.Token);
+            // Usando os endpoints centralizados do AppConfig
+            string rifaEndpoint = string.Format(AppConfig.Api.Endpoints.RifaById, Id);
+            string ticketsEndpoint = string.Format(AppConfig.Api.Endpoints.TicketsByRifa, Id);
+
+            var rifaTask = Http.GetFromJsonAsync<RifaDTO>(rifaEndpoint, linkedCts.Token);
+            var ticketsTask = Http.GetFromJsonAsync<List<TicketDTO>>(ticketsEndpoint, linkedCts.Token);
 
             // Aguardar todas as tasks completarem
             await Task.WhenAll(rifaTask, ticketsTask);

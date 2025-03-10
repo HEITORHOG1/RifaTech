@@ -263,7 +263,7 @@
             try
             {
                 // Verificar se já tem email salvo para lembrar - seguro após renderização
-                var savedEmail = await LocalStorage.GetItemAsync<string>("email");
+                var savedEmail = await LocalStorage.GetItemAsync<string>(AppConfig.LocalStorage.UserEmailKey);
                 if (!string.IsNullOrEmpty(savedEmail))
                 {
                     _loginModel.Email = savedEmail;
@@ -484,7 +484,8 @@
             var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
 
-            var response = await Http.PostAsJsonAsync("api/manage/register", _registerModel, linkedCts.Token);
+            // Usar o endpoint centralizado do AppConfig
+            var response = await Http.PostAsJsonAsync(AppConfig.Api.Endpoints.Register, _registerModel, linkedCts.Token);
 
             if (response.IsSuccessStatusCode)
             {

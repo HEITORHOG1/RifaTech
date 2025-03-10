@@ -116,7 +116,9 @@
             if (authState.User.Identity?.IsAuthenticated == true)
             {
                 var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                _tickets = await Http.GetFromJsonAsync<List<TicketDTO>>("api/tickets/meus", linkedCts.Token);
+
+                // Usar o endpoint centralizado do AppConfig
+                _tickets = await Http.GetFromJsonAsync<List<TicketDTO>>(AppConfig.Api.Endpoints.MyTickets, linkedCts.Token);
 
                 // Filtrar apenas tickets da rifa atual e os mais recentes (últimas 24h)
                 var yesterday = DateTime.UtcNow.AddDays(-1);

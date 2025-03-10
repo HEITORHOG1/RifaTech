@@ -137,6 +137,7 @@
                 queryParams.Add($"endDate={_endDate.Value.ToString("yyyy-MM-dd")}");
             }
 
+            // Usar o endpoint centralizado do AppConfig
             var endpoint = $"{AppConfig.Api.Endpoints.RifasPaginated}?{string.Join("&", queryParams)}";
 
             // Adicionamos um timeout para evitar esperas muito longas

@@ -1,6 +1,7 @@
 ﻿@page "/rifas/{Id:guid}/comprar"
 @using System.Net.Http.Json
 @using RifaTech.DTOs.DTOs
+
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -272,7 +273,9 @@ else
             var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
 
-            _rifa = await Http.GetFromJsonAsync<RifaDTO>($"api/rifas/{Id}", linkedCts.Token);
+            // Usando o endpoint centralizado do AppConfig
+            string endpoint = string.Format(AppConfig.Api.Endpoints.RifaById, Id);
+            _rifa = await Http.GetFromJsonAsync<RifaDTO>(endpoint, linkedCts.Token);
         }
         catch (TaskCanceledException)
         {
@@ -310,7 +313,9 @@ else
                         var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, timeoutCts.Token);
 
-                        var userInfo = await Http.GetFromJsonAsync<UserInfoDTO>($"api/manage/info", linkedCts.Token);
+                        // Usando o endpoint centralizado do AppConfig
+                        var userInfo = await Http.GetFromJsonAsync<UserInfoDTO>(AppConfig.Api.Endpoints.UserInfo, linkedCts.Token);
+
                         if (userInfo != null)
                         {
                             _cliente.Email = userInfo.Email;
@@ -362,9 +367,13 @@ else
             ClienteDTO existingCliente = null;
             try
             {
-                existingCliente = await Http.GetFromJsonAsync<ClienteDTO>(
-                    $"api/clientes/{Uri.EscapeDataString(_cliente.Email)}/{Uri.EscapeDataString(_cliente.PhoneNumber)}/{Uri.EscapeDataString(_cliente.CPF)}",
-                    linkedCts.Token);
+                // Usando o endpoint centralizado do AppConfig
+                string clienteLookupEndpoint = string.Format(AppConfig.Api.Endpoints.ClienteByEmailPhoneCpf,
+                    Uri.EscapeDataString(_cliente.Email),
+                    Uri.EscapeDataString(_cliente.PhoneNumber),
+                    Uri.EscapeDataString(_cliente.CPF));
+
+                existingCliente = await Http.GetFromJsonAsync<ClienteDTO>(clienteLookupEndpoint, linkedCts.Token);
             }
             catch (Exception)
             {
@@ -373,8 +382,8 @@ else
 
             if (existingCliente == null)
             {
-                // Criar novo cliente
-                var response = await Http.PostAsJsonAsync("api/clientes", _cliente, linkedCts.Token);
+                // Criar novo cliente usando o endpoint centralizado do AppConfig
+                var response = await Http.PostAsJsonAsync(AppConfig.Api.Endpoints.Clientes, _cliente, linkedCts.Token);
                 if (response.IsSuccessStatusCode)
                 {
                     _cliente = await response.Content.ReadFromJsonAsync<ClienteDTO>(cancellationToken: linkedCts.Token);
@@ -390,16 +399,16 @@ else
                 _cliente = existingCliente;
             }
 
-            // Criar pagamento PIX
+            // Criar pagamento PIX usando o endpoint centralizado do AppConfig
             var pixRequest = new PixPaymentRequest
             {
-                RifaId = _rifa.Id,  // Use the ID property, not the entire object
+                RifaId = _rifa.Id,
                 Quantidade = _quantidade,
                 ValorTotal = _quantidade * (decimal)_rifa.TicketPrice,
-                ClienteId = _cliente.Id  // Use the ID property, not the entire object
+                ClienteId = _cliente.Id
             };
 
-            var paymentResponse = await Http.PostAsJsonAsync("api/payments/pix", pixRequest, linkedCts.Token);
+            var paymentResponse = await Http.PostAsJsonAsync(AppConfig.Api.Endpoints.PaymentPix, pixRequest, linkedCts.Token);
 
             if (paymentResponse.IsSuccessStatusCode)
             {
