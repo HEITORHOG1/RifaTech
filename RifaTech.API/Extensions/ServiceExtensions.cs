@@ -47,8 +47,6 @@ namespace RifaTech.API.Extensions
 
             // Add HttpClient for WhatsApp API
             services.AddHttpClient<IWhatsAppService, WhatsAppService>();
-
-
         }
     }
 }

@@ -95,22 +95,26 @@ namespace RifaTech.API.Services
                             ? ticketsQuery.OrderByDescending(t => t.Number)
                             : ticketsQuery.OrderBy(t => t.Number);
                         break;
+
                     case "createdAt":
                     case "date":
                         ticketsQuery = query.OrderDirection == "desc"
                             ? ticketsQuery.OrderByDescending(t => t.CreatedAt)
                             : ticketsQuery.OrderBy(t => t.CreatedAt);
                         break;
+
                     case "rifaName":
                         ticketsQuery = query.OrderDirection == "desc"
                             ? ticketsQuery.OrderByDescending(t => t.Rifa.Name)
                             : ticketsQuery.OrderBy(t => t.Rifa.Name);
                         break;
+
                     case "clienteName":
                         ticketsQuery = query.OrderDirection == "desc"
                             ? ticketsQuery.OrderByDescending(t => t.Cliente.Name)
                             : ticketsQuery.OrderBy(t => t.Cliente.Name);
                         break;
+
                     default:
                         ticketsQuery = ticketsQuery.OrderByDescending(t => t.CreatedAt);
                         break;

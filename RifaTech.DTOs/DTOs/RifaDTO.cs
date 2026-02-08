@@ -18,6 +18,7 @@ namespace RifaTech.DTOs.DTOs
 
         // Novos campos
         public string? UserId { get; set; } // ID do usuário que criou a rifa
+
         public string? RifaLink { get; set; } // Link da rifa
         public string? UniqueId { get; set; } // Campo para o link único
 

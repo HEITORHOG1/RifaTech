@@ -139,7 +139,6 @@ public static class TicketEndpoints
             Tags = new List<OpenApiTag> { new() { Name = "Tickets" } }
         });
 
-
         // New endpoint for quick purchase without authentication
         app.MapPost("/rifa/{rifaId}/compra-rapida", async (
                 string rifaId,

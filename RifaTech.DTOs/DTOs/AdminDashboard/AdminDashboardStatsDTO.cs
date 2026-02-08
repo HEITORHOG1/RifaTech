@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RifaTech.DTOs.DTOs.AdminDashboard
+﻿namespace RifaTech.DTOs.DTOs.AdminDashboard
 {
     /// <summary>
     /// Dados gerais do dashboard administrativo
@@ -13,24 +7,28 @@ namespace RifaTech.DTOs.DTOs.AdminDashboard
     {
         // Contagens totais
         public int TotalRifas { get; set; }
+
         public int ActiveRifas { get; set; }
         public int TotalTickets { get; set; }
         public int TotalClientes { get; set; }
 
         // Vendas por período
         public int TodaySales { get; set; }
+
         public int YesterdaySales { get; set; }
         public int WeekSales { get; set; }
         public int MonthSales { get; set; }
 
         // Receita por período
         public decimal TodayRevenue { get; set; }
+
         public decimal YesterdayRevenue { get; set; }
         public decimal WeekRevenue { get; set; }
         public decimal MonthRevenue { get; set; }
 
         // Métricas adicionais
         public float ConversionRate { get; set; }
+
         public int UpcomingDraws { get; set; }
 
         // Metadados

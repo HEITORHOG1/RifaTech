@@ -118,7 +118,6 @@ namespace RifaTech.API.Services
                         }
                     }
                 }
-
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, $"Erro ao verificar status do pagamento {payment.Id}");

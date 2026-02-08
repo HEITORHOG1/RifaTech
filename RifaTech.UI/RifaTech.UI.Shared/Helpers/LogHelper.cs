@@ -1,11 +1,6 @@
 ﻿using Microsoft.JSInterop;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace RifaTech.UI.Shared.Helpers
 {
@@ -149,7 +144,6 @@ namespace RifaTech.UI.Shared.Helpers
 
             return new TimerScope(_jsRuntime, operationName, _componentName, caller);
         }
-
 
         private string GetLogLevelPrefix(LogLevel level)
         {

@@ -13,8 +13,10 @@
 
         // Informações adicionais para o frontend
         public string QrCodePix => Payment?.QrCodeBase64;
+
         public string CodigoPix => Payment?.QrCode;
         public DateTime? ExpiracaoPix => Payment?.ExpirationTime;
+
         public string StatusPagamento => Payment?.Status switch
         {
             0 => "Pendente",

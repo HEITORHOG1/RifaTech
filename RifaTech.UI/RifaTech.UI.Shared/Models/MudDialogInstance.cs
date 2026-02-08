@@ -2,9 +2,13 @@
 {
     public class MudDialogInstance
     {
-        public void Close(DialogResult result = null) { }
-        public void Close() { }
+        public void Close(DialogResult result = null)
+        { }
+
+        public void Close()
+        { }
     }
 
-    public class DialogResult { }
+    public class DialogResult
+    { }
 }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RifaTech.DTOs.DTOs.AdminDashboard
+﻿namespace RifaTech.DTOs.DTOs.AdminDashboard
 {
     /// <summary>
     /// Resultado de um sorteio

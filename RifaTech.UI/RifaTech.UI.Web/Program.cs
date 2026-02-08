@@ -8,8 +8,6 @@ using RifaTech.UI.Shared.Config;
 using RifaTech.UI.Shared.Services;
 using RifaTech.UI.Web.Components;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 

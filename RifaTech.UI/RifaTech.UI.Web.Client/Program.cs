@@ -24,7 +24,6 @@ builder.Services.AddMudServices(config =>
 // Registrar Blazored.LocalStorage
 builder.Services.AddBlazoredLocalStorage();
 
-
 builder.Services.AddScoped<ClienteRecorrenteService>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddAuthorizationCore();
