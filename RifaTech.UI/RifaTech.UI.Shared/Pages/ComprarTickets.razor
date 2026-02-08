@@ -1,0 +1,127 @@
+@page "/tickets/comprar"
+@using System.Net.Http.Json
+@using RifaTech.DTOs.DTOs
+@using RifaTech.UI.Shared.Config
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Comprar Tickets - RifaTech</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Class="mr-2" />
+        Comprar Tickets
+    </MudText>
+
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+        Escolha uma rifa abaixo para comprar seus tickets e concorrer a prêmios incríveis!
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudContainer Class="d-flex flex-column align-center justify-center my-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.body1" Class="mt-4">Carregando rifas disponíveis...</MudText>
+        </MudContainer>
+    }
+    else if (_rifas == null || !_rifas.Any())
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="my-4">
+            Nenhuma rifa disponível para compra no momento.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var rifa in _rifas)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="3" Class="hover-card">
+                        <MudCardMedia Image="@GetRifaImage(rifa)" Height="180" />
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6">@rifa.Name</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                @(rifa.Description?.Length > 100 ? rifa.Description[..100] + "..." : rifa.Description)
+                            </MudText>
+                            <MudDivider Class="my-2" />
+                            <div class="d-flex justify-space-between align-center">
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" />
+                                    Ticket: <strong>R$ @rifa.TicketPrice.ToString("N2")</strong>
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Size="Size.Small" />
+                                    Prêmio: <strong>R$ @rifa.PriceValue.ToString("N2")</strong>
+                                </MudText>
+                            </div>
+                            <MudProgressLinear Color="Color.Primary" Value="@((double)(rifa.ProgressPercentage ?? 0))"
+                                               Max="100" Class="mt-3" Rounded="true" Size="Size.Medium" />
+                            <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-1">
+                                @rifa.TicketsSold / @rifa.MaxTickets tickets vendidos
+                            </MudText>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                                       Href="@($"/rifas/{rifa.Id}/compra-rapida")"
+                                       StartIcon="@Icons.Material.Filled.FlashOn">
+                                Comprar Agora
+                            </MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private List<RifaDTO>? _rifas;
+    private bool _loading = true;
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRifasAsync();
+    }
+
+    private async Task LoadRifasAsync()
+    {
+        try
+        {
+            _loading = true;
+            var todas = await Http.GetFromJsonAsync<List<RifaDTO>>(
+                AppConfig.Api.Endpoints.Rifas, _cts.Token);
+
+            // Filtrar apenas rifas ativas (não encerradas e não deletadas)
+            _rifas = todas?.Where(r => r.IsDone != true && r.EhDeleted != true).ToList()
+                ?? new List<RifaDTO>();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar rifas: {ex.Message}", Severity.Error);
+            _rifas = new List<RifaDTO>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetRifaImage(RifaDTO rifa)
+    {
+        if (string.IsNullOrEmpty(rifa.Base64Img))
+            return "/images/default-rifa.jpg";
+        
+        // Se já é um data URI completo (data:image/...), usa diretamente
+        if (rifa.Base64Img.StartsWith("data:"))
+            return rifa.Base64Img;
+        
+        // Caso contrário, assume que é base64 puro de PNG
+        return $"data:image/png;base64,{rifa.Base64Img}";
+    }
+
+    public void Dispose() => _cts.Cancel();
+}

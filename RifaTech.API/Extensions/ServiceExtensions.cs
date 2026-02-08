@@ -1,5 +1,7 @@
-﻿using RifaTech.API.Repositories;
+﻿using FluentValidation;
+using RifaTech.API.Repositories;
 using RifaTech.API.Services;
+using RifaTech.API.Validators;
 using RifaTech.DTOs.Contracts;
 
 namespace RifaTech.API.Extensions
@@ -8,45 +10,57 @@ namespace RifaTech.API.Extensions
     {
         public static void AddApplicationServices(this IServiceCollection services)
         {
-            // Repository services
-            services.AddTransient<IRifaService, RifaService>();
-            services.AddTransient<ITicketService, TicketService>();
-            services.AddTransient<IPaymentService, Repositories.PaymentService>();
-            services.AddTransient<IExtraNumberService, ExtraNumberService>();
-            services.AddTransient<IDrawService, DrawService>();
-            services.AddTransient<IUserAccount, AccountService>();
-            services.AddTransient<IClienteService, ClienteService>();
-            services.AddTransient<IUnpaidRifaService, UnpaidRifaService>();
+            // =========================================================
+            // FluentValidation (auto-registers all validators in assembly)
+            // =========================================================
+            services.AddValidatorsFromAssemblyContaining<CompraRapidaValidator>(ServiceLifetime.Scoped);
 
-            // Add CompraRapida service
+            // =========================================================
+            // Domain/Business services (Scoped — share DbContext lifetime)
+            // =========================================================
+            services.AddScoped<IRifaService, RifaService>();
+            services.AddScoped<ITicketService, TicketService>();
+            services.AddScoped<IPaymentService, Repositories.PaymentService>();
+            services.AddScoped<IExtraNumberService, ExtraNumberService>();
+            services.AddScoped<IDrawService, DrawService>();
+            services.AddScoped<IUserAccount, AccountService>();
+            services.AddScoped<IClienteService, ClienteService>();
+            services.AddScoped<IUnpaidRifaService, UnpaidRifaService>();
             services.AddScoped<ICompraRapidaService, CompraRapidaService>();
 
-            // Add cache service
+            // =========================================================
+            // Cache (Singleton — thread-safe, shared across requests)
+            // =========================================================
             services.AddSingleton<ICacheService, MemoryCacheService>();
 
-            // Add notification services
+            // =========================================================
+            // Notification services (Scoped)
+            // =========================================================
             services.AddScoped<ITemplateEngine, TemplateEngine>();
             services.AddScoped<EmailNotificationService>();
-            services.AddScoped<IWhatsAppService, WhatsAppService>();
             services.AddScoped<INotificationService, MultiChannelNotificationService>();
 
-            // Add admin services
+            // WhatsApp via HttpClientFactory (typed client)
+            services.AddHttpClient<IWhatsAppService, WhatsAppService>();
+
+            // =========================================================
+            // Admin services (Scoped)
+            // =========================================================
             services.AddScoped<IAdminStatsService, AdminStatsService>();
             services.AddScoped<IDrawManagementService, DrawManagementService>();
             services.AddScoped<ITicketSearchService, TicketSearchService>();
 
-            // Add background services
-            services.AddHostedService<PaymentStatusVerificationService>();
-            services.AddHostedService<NotificationBackgroundService>();
-
-            // Add MercadoPago service
+            // =========================================================
+            // External integrations (Scoped)
+            // =========================================================
             services.AddScoped<IMercadoPagoService, MercadoPagoService>();
-
-            // Add Webhook service
             services.AddScoped<IWebhookService, WebhookService>();
 
-            // Add HttpClient for WhatsApp API
-            services.AddHttpClient<IWhatsAppService, WhatsAppService>();
+            // =========================================================
+            // Background services (Singleton by design)
+            // =========================================================
+            services.AddHostedService<PaymentStatusVerificationService>();
+            services.AddHostedService<NotificationBackgroundService>();
         }
     }
 }

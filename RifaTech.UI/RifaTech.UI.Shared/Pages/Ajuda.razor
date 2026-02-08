@@ -1,0 +1,129 @@
+@page "/ajuda"
+
+<PageTitle>Ajuda - RifaTech</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Help" Class="mr-2" />
+        Central de Ajuda
+    </MudText>
+
+    <MudText Typo="Typo.subtitle1" Class="mb-6" Color="Color.Secondary">
+        Encontre respostas para as dúvidas mais frequentes sobre a plataforma RifaTech.
+    </MudText>
+
+    <!-- FAQ Section -->
+    <MudExpansionPanels MultiExpansion="true" Class="mb-6">
+        <MudExpansionPanel Text="Como participar de uma rifa?">
+            <MudText>
+                1. Acesse a página <strong>Comprar Tickets</strong> no menu.<br />
+                2. Escolha a rifa desejada.<br />
+                3. Selecione a quantidade de tickets.<br />
+                4. Realize o pagamento via PIX.<br />
+                5. Após a confirmação do pagamento, seus tickets serão ativados automaticamente.
+            </MudText>
+        </MudExpansionPanel>
+
+        <MudExpansionPanel Text="Como funciona o pagamento via PIX?">
+            <MudText>
+                Ao finalizar a compra, um QR Code PIX será gerado automaticamente. 
+                Basta escanear o código com o aplicativo do seu banco e confirmar o pagamento. 
+                A confirmação é feita automaticamente via webhook do MercadoPago.
+            </MudText>
+        </MudExpansionPanel>
+
+        <MudExpansionPanel Text="Como sei se meu ticket foi confirmado?">
+            <MudText>
+                Acesse <strong>Meus Tickets</strong> no menu. Lá você pode ver o status de todos os seus tickets:
+            </MudText>
+            <MudList T="string" Dense="true" Class="mt-2">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.HourglassEmpty">
+                    <strong>Pendente</strong> – Aguardando confirmação do pagamento.
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle">
+                    <strong>Pago</strong> – Pagamento confirmado, ticket ativo para o sorteio.
+                </MudListItem>
+                <MudListItem T="string" Icon="@Icons.Material.Filled.Cancel">
+                    <strong>Cancelado</strong> – Pagamento não realizado dentro do prazo.
+                </MudListItem>
+            </MudList>
+        </MudExpansionPanel>
+
+        <MudExpansionPanel Text="Como funciona o sorteio?">
+            <MudText>
+                O sorteio é realizado automaticamente na data programada. 
+                Um número vencedor é sorteado aleatoriamente entre todos os tickets 
+                com pagamento confirmado. O resultado é publicado na plataforma e o 
+                ganhador é notificado via e-mail e/ou WhatsApp.
+            </MudText>
+        </MudExpansionPanel>
+
+        <MudExpansionPanel Text="O que é Número Extra?">
+            <MudText>
+                O <strong>Número Extra</strong> é uma funcionalidade especial de algumas rifas. 
+                Além do número do ticket, você recebe números extras que aumentam suas chances de ganhar. 
+                Nem todas as rifas possuem essa funcionalidade – verifique na descrição de cada rifa.
+            </MudText>
+        </MudExpansionPanel>
+
+        <MudExpansionPanel Text="Como criar uma rifa? (Administradores)">
+            <MudText>
+                Se você é administrador:<br />
+                1. Acesse <strong>Criar Rifa</strong> no menu.<br />
+                2. Preencha nome, descrição, preço do ticket e quantidade.<br />
+                3. Defina as datas de início e fim.<br />
+                4. Opcionalmente, adicione uma imagem.<br />
+                5. Clique em <strong>Criar Rifa</strong>.<br /><br />
+                A rifa ficará disponível imediatamente para compra de tickets.
+            </MudText>
+        </MudExpansionPanel>
+
+        <MudExpansionPanel Text="Posso cancelar uma compra?">
+            <MudText>
+                Tickets com pagamento pendente podem ser cancelados automaticamente 
+                se o pagamento não for realizado dentro do prazo estipulado. 
+                Tickets já pagos não podem ser cancelados. Em caso de problemas, 
+                entre em contato com o suporte.
+            </MudText>
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+
+    <!-- Contato -->
+    <MudPaper Elevation="3" Class="pa-6">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.ContactSupport" Class="mr-2" />
+            Precisa de mais ajuda?
+        </MudText>
+        <MudText Class="mb-4">
+            Se sua dúvida não foi respondida acima, entre em contato conosco:
+        </MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudCard Elevation="1">
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Email" Color="Color.Primary" Class="mr-3" />
+                            <div>
+                                <MudText Typo="Typo.subtitle2">E-mail</MudText>
+                                <MudText>suporte@rifatech.com.br</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudCard Elevation="1">
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Chat" Color="Color.Success" Class="mr-3" />
+                            <div>
+                                <MudText Typo="Typo.subtitle2">WhatsApp</MudText>
+                                <MudText>(00) 00000-0000</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>

@@ -372,9 +372,15 @@ else
 
     private string GetRifaImage()
     {
-        return string.IsNullOrEmpty(_rifa.Base64Img)
-            ? AppConfig.UI.DefaultImagePath
-            : $"data:image/png;base64,{_rifa.Base64Img}";
+        if (string.IsNullOrEmpty(_rifa.Base64Img))
+            return AppConfig.UI.DefaultImagePath;
+        
+        // Se já é um data URI completo (data:image/...), usa diretamente
+        if (_rifa.Base64Img.StartsWith("data:"))
+            return _rifa.Base64Img;
+        
+        // Caso contrário, assume que é base64 puro de PNG
+        return $"data:image/png;base64,{_rifa.Base64Img}";
     }
 
     private string FormatCurrency(decimal value)

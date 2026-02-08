@@ -1,0 +1,51 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: rifatech-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: RifaTechDB
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: RifaTech.API/Dockerfile
+    container_name: rifatech-api
+    restart: unless-stopped
+    ports:
+      - "5127:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mysql;DataBase=RifaTechDB;Uid=root;Pwd=root;Port=3306;
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  ui:
+    build:
+      context: .
+      dockerfile: RifaTech.UI/RifaTech.UI.Web/Dockerfile
+    container_name: rifatech-ui
+    restart: unless-stopped
+    ports:
+      - "7230:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ApiSettings__BaseUrl=http://api:8080
+      - ApiSettings__BrowserBaseUrl=http://localhost:5127
+    depends_on:
+      - api
+
+volumes:
+  mysql_data:

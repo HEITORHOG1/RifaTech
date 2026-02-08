@@ -1,0 +1,12 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/node_modules
+**/.idea
+**/RifaTech.Tests
+# Excluir apenas o projeto MAUI (não containerizável), manter UI.Web, UI.Web.Client e UI.Shared
+**/RifaTech.UI/RifaTech.UI
+**/*.user
+**/*.md
+**/LICENSE.txt

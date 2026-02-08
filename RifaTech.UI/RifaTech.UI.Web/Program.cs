@@ -84,13 +84,28 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Em Docker/produção com proxy reverso, não redirecionar para HTTPS
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
+app.MapStaticAssets();
 app.UseAntiforgery();
 
 // Importante: Adicionar middleware de autenticação e autorização na ordem correta
-app.UseAuthentication(); // Adicionar isso
-app.UseAuthorization();  // Já existente ou adicionar se não tiver
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Endpoint de configuração para o cliente WASM obter a URL da API acessível pelo browser
+app.MapGet("/api/client-config", (IConfiguration config) =>
+    Results.Json(new
+    {
+        apiBaseUrl = config["ApiSettings:BrowserBaseUrl"]
+            ?? config["ApiSettings:BaseUrl"]
+            ?? AppConfig.Api.BaseUrl
+    }));
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

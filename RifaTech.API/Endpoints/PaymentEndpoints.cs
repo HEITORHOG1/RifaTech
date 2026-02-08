@@ -7,137 +7,97 @@ public static class PaymentEndpoints
 {
     public static void RegisterPaymentEndpoints(this IEndpointRouteBuilder app)
     {
-        // Admin only - require admin role
-        app.MapGet("/payments", async (IPaymentService paymentService, ILogger<Program> logger) =>
+        var group = app.MapGroup("/payments")
+            .WithTags("Pagamentos");
+
+        // Admin only — list all payments
+        group.MapGet("/", async (IPaymentService paymentService, ILogger<Program> logger) =>
         {
-            try
-            {
-                var payments = await paymentService.GetAllPaymentsAsync();
-                logger.LogInformation("Retrieved all payments successfully");
-                return Results.Ok(payments);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error retrieving payments");
-                throw;
-            }
+            var payments = await paymentService.GetAllPaymentsAsync();
+            logger.LogInformation("Retrieved {Count} payments", payments.Count());
+            return Results.Ok(payments);
         })
         .WithName("GetAllPayments")
-        .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
+        .RequireAuthorization(policy => policy.RequireRole("Admin"))
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Listar todos os pagamentos",
-            Description = "Retorna uma lista de todos os pagamentos realizados.",
-            Tags = new List<OpenApiTag> { new() { Name = "Pagamentos" } }
+            Description = "Retorna uma lista de todos os pagamentos realizados."
         });
 
-        // Admin only - require admin role
-        app.MapGet("/payments/{id}", async (Guid id, IPaymentService paymentService, ILogger<Program> logger) =>
+        // Admin only — get payment by ID
+        group.MapGet("/{id:guid}", async (Guid id, IPaymentService paymentService, ILogger<Program> logger) =>
         {
-            try
+            var payment = await paymentService.GetPaymentByIdAsync(id);
+            if (payment is null)
             {
-                var payment = await paymentService.GetPaymentByIdAsync(id);
-                if (payment != null)
-                {
-                    logger.LogInformation($"Retrieved payment with ID {id} successfully");
-                    return Results.Ok(payment);
-                }
-                else
-                {
-                    logger.LogWarning($"Payment with ID {id} not found");
-                    return Results.NotFound();
-                }
+                logger.LogWarning("Payment {PaymentId} not found", id);
+                return Results.NotFound();
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, $"Error retrieving payment with ID {id}");
-                throw;
-            }
+
+            logger.LogInformation("Retrieved payment {PaymentId}", id);
+            return Results.Ok(payment);
         })
         .WithName("GetPaymentById")
-        .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
+        .RequireAuthorization(policy => policy.RequireRole("Admin"))
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Obter detalhes de um pagamento",
-            Description = "Retorna os detalhes de um pagamento específico pelo ID.",
-            Tags = new List<OpenApiTag> { new() { Name = "Pagamentos" } }
+            Description = "Retorna os detalhes de um pagamento específico pelo ID."
         });
 
-        // Admin only - require admin role
-        app.MapPost("/payments", async (PaymentDTO payment, IPaymentService paymentService, ILogger<Program> logger) =>
+        // Admin only — create payment
+        group.MapPost("/", async (PaymentDTO payment, IPaymentService paymentService, ILogger<Program> logger) =>
         {
-            try
-            {
-                var createdPayment = await paymentService.ProcessPaymentAsync(payment);
-                logger.LogInformation($"Created payment with ID {createdPayment.Id} successfully");
-                return Results.Created($"/payment/{createdPayment.Id}", createdPayment);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error processing payment");
-                throw;
-            }
+            var createdPayment = await paymentService.ProcessPaymentAsync(payment);
+            logger.LogInformation("Created payment {PaymentId} for ticket {TicketId}",
+                createdPayment.Id, createdPayment.TicketId);
+            return Results.Created($"/payments/{createdPayment.Id}", createdPayment);
         })
         .WithName("CreatePayment")
-        .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
+        .RequireAuthorization(policy => policy.RequireRole("Admin"))
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Registrar um novo pagamento",
-            Description = "Registra um novo pagamento para um ticket.",
-            Tags = new List<OpenApiTag> { new() { Name = "Pagamentos" } }
+            Description = "Registra um novo pagamento para um ticket."
         });
 
-        // Public - allow anonymous access for checking payment status
-        app.MapGet("/payments/status/{paymentId}", async (Guid paymentId, IPaymentService paymentService, ILogger<Program> logger) =>
+        // Public — check payment status
+        group.MapGet("/status/{paymentId:guid}", async (Guid paymentId, IPaymentService paymentService, ILogger<Program> logger) =>
         {
-            try
-            {
-                var paymentStatus = await paymentService.CheckPaymentStatusAsync(paymentId);
-                logger.LogInformation($"Checked status for payment ID {paymentId} successfully");
-                return Results.Ok(paymentStatus);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, $"Error checking status for payment ID {paymentId}");
-                return Results.Problem("Erro ao verificar o status do pagamento.");
-            }
+            var paymentStatus = await paymentService.CheckPaymentStatusAsync(paymentId);
+            logger.LogInformation("Checked status for payment {PaymentId}: Status={Status}",
+                paymentId, paymentStatus.Status);
+            return Results.Ok(paymentStatus);
         })
-       .WithName("CheckPaymentStatus")
-       .AllowAnonymous() // Allow anonymous access for checking payment status
-       .WithOpenApi(x => new OpenApiOperation(x)
-       {
-           Summary = "Verificar o status do pagamento",
-           Description = "Verifica o status atual de um pagamento específico.",
-           Tags = new List<OpenApiTag> { new() { Name = "Pagamentos" } }
-       });
-
-        // Public - allow anonymous access for PIX payment
-        app.MapPost("/payments/pix", async ([FromBody] PixPaymentRequest request, IPaymentService paymentService, ILogger<Program> logger) =>
+        .WithName("CheckPaymentStatus")
+        .AllowAnonymous()
+        .WithOpenApi(x => new OpenApiOperation(x)
         {
-            try
-            {
-                var createdPayment = await paymentService.IniciarPagamentoPix(
-                    request.RifaId,
-                    request.Quantidade,
-                    request.ValorTotal,
-                    request.ClienteId);
+            Summary = "Verificar o status do pagamento",
+            Description = "Verifica o status atual de um pagamento específico."
+        });
 
-                logger.LogInformation($"Created payment with ID {createdPayment.Id} successfully");
-                return Results.Created($"/payment/{createdPayment.Id}", createdPayment);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error processing payment");
-                throw;
-            }
+        // Public — PIX payment
+        group.MapPost("/pix", async ([FromBody] PixPaymentRequest request, IPaymentService paymentService, ILogger<Program> logger) =>
+        {
+            var createdPayment = await paymentService.IniciarPagamentoPix(
+                request.RifaId,
+                request.Quantidade,
+                request.ValorTotal,
+                request.ClienteId);
+
+            logger.LogInformation("Created PIX payment {PaymentId} for rifa {RifaId}, amount {Amount}",
+                createdPayment.Id, request.RifaId, request.ValorTotal);
+            return Results.Created($"/payments/{createdPayment.Id}", createdPayment);
         })
         .WithName("GerarPaymentPix")
-        .AllowAnonymous() // Allow anonymous access for PIX payment
+        .AllowAnonymous()
+        .RequireRateLimiting("PaymentEndpoints")
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Gerar pagamento Pix",
-            Description = "Gera um pagamento Pix para um ticket.",
-            Tags = new List<OpenApiTag> { new() { Name = "Pagamentos" } }
+            Description = "Gera um pagamento Pix para um ticket."
         });
     }
 }

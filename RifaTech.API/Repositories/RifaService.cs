@@ -73,7 +73,7 @@ namespace RifaTech.API.Repositories
 
             return await _cacheService.GetOrCreateAsync(cacheKey, async () =>
             {
-                _logger.LogInformation($"Cache miss for rifa ID {id}, loading from database");
+                _logger.LogInformation("Cache miss for rifa {RifaId}, loading from database", id);
 
                 // Carrega a rifa sem rastreamento de alterações
                 var rifa = await _context.Rifas
@@ -90,73 +90,19 @@ namespace RifaTech.API.Repositories
 
         public async Task<IEnumerable<RifaDTO>> GetAllRifasAsync()
         {
-            try
+            return await _cacheService.GetOrCreateAsync(ALL_RIFAS_CACHE_KEY, async () =>
             {
-                return await _cacheService.GetOrCreateAsync("all_rifas", async () =>
-                {
-                    _logger.LogInformation("Cache miss for all rifas, loading from database");
+                _logger.LogInformation("Cache miss for all rifas, loading from database");
 
-                    try
-                    {
-                        var rifas = await _context.Rifas
-                            .Include(r => r.Tickets)
-                            .Where(r => r.EhDeleted == false)
-                            .ToListAsync();
+                var rifas = await _context.Rifas
+                    .Include(r => r.Tickets)
+                    .Where(r => r.EhDeleted == false)
+                    .AsNoTracking()
+                    .ToListAsync();
 
-                        return _mapper.Map<IEnumerable<RifaDTO>>(rifas);
-                    }
-                    catch (FormatException ex) when (ex.Message.Contains("Could not parse CHAR(36) value as Guid"))
-                    {
-                        // Tratamento específico para o erro de GUID inválido
-                        _logger.LogError(ex, "Erro com GUID inválido ao carregar rifas");
-
-                        // Tenta uma abordagem alternativa que evita o GUID problemático
-                        var query = "SELECT * FROM Rifas WHERE EhDeleted = 0";
-                        var rifas = new List<Rifa>();
-
-                        using (var connection = _context.Database.GetDbConnection())
-                        {
-                            await connection.OpenAsync();
-                            using (var command = connection.CreateCommand())
-                            {
-                                command.CommandText = query;
-                                using (var reader = await command.ExecuteReaderAsync())
-                                {
-                                    while (await reader.ReadAsync())
-                                    {
-                                        try
-                                        {
-                                            var rifa = new Rifa
-                                            {
-                                                Id = Guid.Parse(reader["Id"].ToString()),
-                                                Name = reader["Name"].ToString(),
-                                                Description = reader["Description"].ToString(),
-                                                // Preencha outras propriedades conforme necessário
-                                                EhDeleted = false
-                                            };
-
-                                            rifas.Add(rifa);
-                                        }
-                                        catch (FormatException)
-                                        {
-                                            // Pula este registro se o GUID for inválido
-                                            _logger.LogWarning($"Pulando rifa com GUID inválido: {reader["Id"]}");
-                                            continue;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        return _mapper.Map<IEnumerable<RifaDTO>>(rifas);
-                    }
-                }, TimeSpan.FromMinutes(10));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao obter rifas");
-                throw;
-            }
+                _logger.LogInformation("Loaded {Count} rifas from database", rifas.Count);
+                return _mapper.Map<IEnumerable<RifaDTO>>(rifas);
+            }, TimeSpan.FromMinutes(10));
         }
 
         public async Task<IEnumerable<RifaDTO>> GetFeaturedRifasAsync()
@@ -193,6 +139,11 @@ namespace RifaTech.API.Repositories
                     rifaDTO.TimeRemaining = rifaDTO.DrawDateTime > DateTime.UtcNow
                         ? (rifaDTO.DrawDateTime - DateTime.UtcNow).ToString(@"dd\d\ hh\h\ mm\m")
                         : "Encerrado";
+
+                    // Populate computed fields (was previously computed properties, now set by service)
+                    rifaDTO.IsDone = rifaDTO.DrawDateTime < DateTime.UtcNow;
+                    rifaDTO.TicketsSold = rifaDTO.Tickets?.Count ?? 0;
+                    rifaDTO.TicketsRemaining = rifaDTO.MaxTickets - (rifaDTO.Tickets?.Count ?? 0);
                 }
 
                 return rifaDTOs;

@@ -1,0 +1,85 @@
+@page "/rifas/minhas"
+@using System.Net.Http.Json
+@using RifaTech.DTOs.DTOs
+@using RifaTech.UI.Shared.Config
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Minhas Rifas - RifaTech</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Class="mr-2" />
+        Minhas Rifas
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudContainer Class="d-flex flex-column align-center justify-center my-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.body1" Class="mt-4">Carregando suas rifas...</MudText>
+        </MudContainer>
+    }
+    else if (_rifas == null || !_rifas.Any())
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="my-4">
+            <MudText>Você ainda não participou de nenhuma rifa.</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/rifas" Class="mt-2">
+                Ver Rifas Disponíveis
+            </MudButton>
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var rifa in _rifas)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <RifaCard Rifa="rifa" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private List<RifaDTO>? _rifas;
+    private bool _loading = true;
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRifasAsync();
+    }
+
+    private async Task LoadRifasAsync()
+    {
+        try
+        {
+            _loading = true;
+            // Carrega todas as rifas - filtrando no cliente pelas que o usuário participou
+            var todasRifas = await Http.GetFromJsonAsync<List<RifaDTO>>(
+                AppConfig.Api.Endpoints.Rifas, _cts.Token);
+
+            // Filtra rifas que possuem tickets (participação do usuário)
+            _rifas = todasRifas?.Where(r => r.Tickets != null && r.Tickets.Any()).ToList()
+                ?? new List<RifaDTO>();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar rifas: {ex.Message}", Severity.Error);
+            _rifas = new List<RifaDTO>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public void Dispose() => _cts.Cancel();
+}

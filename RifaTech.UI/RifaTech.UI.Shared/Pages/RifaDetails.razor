@@ -24,7 +24,7 @@ else
     <MudGrid>
         <MudItem xs="12" md="6">
             <MudPaper Class="pa-4 mud-height-full">
-                <MudImage Src="@(string.IsNullOrEmpty(_rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{_rifa.Base64Img}")"
+                <MudImage Src="@GetRifaImage()"
                           Width="100" Height="400" ObjectFit="ObjectFit.Cover" ObjectPosition="ObjectPosition.Center"
                           Elevation="3" Class="rounded-lg" />
             </MudPaper>
@@ -170,6 +170,19 @@ else
         };
 
         await DialogService.ShowAsync<ShareDialog>("Compartilhar Rifa", parameters, options);
+    }
+
+    private string GetRifaImage()
+    {
+        if (string.IsNullOrEmpty(_rifa?.Base64Img))
+            return "/images/default-rifa.jpg";
+        
+        // Se já é um data URI completo (data:image/...), usa diretamente
+        if (_rifa.Base64Img.StartsWith("data:"))
+            return _rifa.Base64Img;
+        
+        // Caso contrário, assume que é base64 puro de PNG
+        return $"data:image/png;base64,{_rifa.Base64Img}";
     }
 
     private string GetClienteInitials(string name)

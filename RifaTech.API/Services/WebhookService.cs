@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json;
 using RifaTech.API.Entities;
 using RifaTech.DTOs.Contracts;
 
@@ -27,12 +27,13 @@ namespace RifaTech.API.Services
         {
             try
             {
-                _logger.LogInformation($"Received payment webhook notification: {JsonConvert.SerializeObject(notification)}");
+                _logger.LogInformation("Processing webhook notification: Type={Type}, Action={Action}",
+                    notification.Type, notification.Action);
 
                 // Validar o tipo de notificação
                 if (notification.Type != "payment")
                 {
-                    _logger.LogWarning($"Ignoring non-payment webhook notification of type {notification.Type}");
+                    _logger.LogWarning("Ignoring non-payment webhook notification of type {Type}", notification.Type);
                     return;
                 }
 
@@ -48,18 +49,20 @@ namespace RifaTech.API.Services
 
                 if (mpPayment == null)
                 {
-                    _logger.LogWarning($"Payment {notification.Data.Id} not found in Mercado Pago");
+                    _logger.LogWarning("Payment {ExternalPaymentId} not found in Mercado Pago", notification.Data.Id);
                     return;
                 }
 
-                _logger.LogInformation($"Payment {notification.Data.Id} status: {mpPayment.Status}");
+                _logger.LogInformation("Payment {ExternalPaymentId} status from Mercado Pago: {Status}",
+                    notification.Data.Id, mpPayment.Status);
 
                 // Buscar os pagamentos no banco de dados que têm este ID externo
                 var payments = await _paymentService.GetPaymentsByExternalIdAsync(notification.Data.Id);
 
                 if (payments == null || !payments.Any())
                 {
-                    _logger.LogWarning($"No matching payments found for external ID {notification.Data.Id}");
+                    _logger.LogWarning("No matching payments found for external ID {ExternalPaymentId}",
+                        notification.Data.Id);
                     return;
                 }
 
@@ -67,12 +70,13 @@ namespace RifaTech.API.Services
                 foreach (var payment in payments)
                 {
                     await _paymentService.CheckPaymentStatusAsync(payment.Id);
-                    _logger.LogInformation($"Updated payment status for payment {payment.Id}");
+                    _logger.LogInformation("Updated payment status for payment {PaymentId}", payment.Id);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing payment webhook");
+                _logger.LogError(ex, "Error processing payment webhook for external ID {ExternalPaymentId}",
+                    notification?.Data?.Id);
                 // Não propagar a exceção para que a resposta seja retornada ao Mercado Pago
             }
         }

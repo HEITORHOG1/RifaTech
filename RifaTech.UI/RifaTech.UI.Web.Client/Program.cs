@@ -6,6 +6,8 @@ using MudBlazor.Services;
 using RifaTech.UI.Shared.Config;
 using RifaTech.UI.Shared.Services;
 using RifaTech.UI.Web.Client.Services;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -33,18 +35,33 @@ builder.Services.AddScoped<IStorageService, BrowserStorageService>();
 // Add device-specific services
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 
+// Buscar a URL da API do endpoint de configuração do servidor
+string? browserApiUrl = null;
+try
+{
+    using var tempHttp = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+    var configResponse = await tempHttp.GetFromJsonAsync<JsonElement>("/api/client-config");
+    browserApiUrl = configResponse.GetProperty("apiBaseUrl").GetString();
+    Console.WriteLine($"WASM: URL da API obtida do servidor: {browserApiUrl}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"WASM: Falha ao obter config do servidor: {ex.Message}");
+}
+
+var apiUrl = browserApiUrl
+    ?? builder.Configuration["ApiSettings:BaseUrl"]
+    ?? AppConfig.Api.BaseUrl;
+
+Console.WriteLine($"WASM: Configurando HttpClient com BaseAddress: {apiUrl}");
+
 // Configurar HttpClient
 builder.Services.AddScoped(sp =>
 {
-    // Usar a URL base da API para cliente WASM
-    var apiUrl = AppConfig.Api.BaseUrl;
-    Console.WriteLine($"WASM: Configurando HttpClient com BaseAddress: {apiUrl}");
-
     var httpClient = new HttpClient
     {
         BaseAddress = new Uri(apiUrl)
     };
-
     return httpClient;
 });
 

@@ -719,9 +719,15 @@
 
     private string GetRifaImage(RifaDTO rifa)
     {
-        return string.IsNullOrEmpty(rifa.Base64Img)
-            ? "/images/default-rifa.jpg"
-            : $"data:image/png;base64,{rifa.Base64Img}";
+        if (string.IsNullOrEmpty(rifa.Base64Img))
+            return "/images/default-rifa.jpg";
+        
+        // Se já é um data URI completo (data:image/...), usa diretamente
+        if (rifa.Base64Img.StartsWith("data:"))
+            return rifa.Base64Img;
+        
+        // Caso contrário, assume que é base64 puro de PNG
+        return $"data:image/png;base64,{rifa.Base64Img}";
     }
 
     private string FormatCurrency(decimal value)
