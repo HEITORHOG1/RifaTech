@@ -19,7 +19,6 @@ namespace RifaTech.API.Migrations
             InsertTickets(migrationBuilder);
 
             // Inserir payments para simular diferentes estados
-           
         }
 
         private void InsertClientes(MigrationBuilder migrationBuilder)
@@ -223,8 +222,6 @@ namespace RifaTech.API.Migrations
                 }
             }
         }
-
-       
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {

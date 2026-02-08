@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RifaTech.UI.Shared.Config
+﻿namespace RifaTech.UI.Shared.Config
 {
     /// <summary>
     /// Configurações centralizadas da aplicação
@@ -21,6 +15,7 @@ namespace RifaTech.UI.Shared.Config
             {
                 // Rifas
                 public const string Rifas = "/rifas";
+
                 public const string RifaById = "/rifas/{0}"; // Formato: /rifas/guid
                 public const string RifasPaginated = "/rifas/paginated";
                 public const string RifasDestaque = "/rifas/destaque";
@@ -29,6 +24,7 @@ namespace RifaTech.UI.Shared.Config
 
                 // Tickets
                 public const string Tickets = "/tickets";
+
                 public const string TicketsByRifa = "/rifa/{0}/tickets"; // Formato: /rifa/guid/tickets
                 public const string TicketById = "/ticket/{0}"; // Formato: /ticket/guid
                 public const string BuyTicket = "/rifa/{0}/buy-ticket"; // Formato: /rifa/guid/buy-ticket
@@ -37,12 +33,14 @@ namespace RifaTech.UI.Shared.Config
 
                 // Clientes
                 public const string Clientes = "/clientes";
+
                 public const string ClienteById = "/clientes/{0}"; // Formato: /clientes/guid
                 public const string ClienteLookup = "/clientes/lookup"; // Busca por email, telefone ou CPF
                 public const string ClienteByEmailPhoneCpf = "/clientes/{0}/{1}/{2}"; // Formato: /clientes/email/phone/cpf
 
                 // Pagamentos
                 public const string Payments = "/payments";
+
                 public const string PaymentById = "/payments/{0}"; // Formato: /payments/guid
                 public const string PaymentStatus = "/payments/status/{0}"; // Formato: /payments/status/guid
                 public const string PaymentPix = "/payments/pix"; // Gerar pagamento PIX
@@ -52,6 +50,7 @@ namespace RifaTech.UI.Shared.Config
 
                 // Autenticação
                 public const string Auth = "/manage";
+
                 public const string Login = "/manage/login";
                 public const string Register = "/manage/register";
                 public const string RefreshToken = "/manage/refresh-token";
@@ -60,6 +59,7 @@ namespace RifaTech.UI.Shared.Config
 
                 // Admin
                 public const string AdminStats = "/admin/dashboard/stats";
+
                 public const string AdminSalesReport = "/admin/sales/report";
                 public const string AdminTopSellingRifas = "/admin/rifas/top-selling";
                 public const string AdminRecentSales = "/admin/tickets/recent-sales";
@@ -67,11 +67,13 @@ namespace RifaTech.UI.Shared.Config
 
                 // Draw (Sorteios)
                 public const string Draws = "/draws";
+
                 public const string DrawById = "/draw/{0}"; // Formato: /draw/guid
                 public const string CreateDraw = "/rifa/{0}/draw"; // Formato: /rifa/guid/draw
 
                 // Draw Management
                 public const string ExecuteDraw = "/admin/draws/execute/{0}"; // Formato: /admin/draws/execute/guid
+
                 public const string DrawHistory = "/admin/draws/history";
                 public const string DrawPreview = "/admin/draws/preview/{0}"; // Formato: /admin/draws/preview/guid
                 public const string ScheduleDraw = "/admin/draws/schedule";
@@ -79,6 +81,7 @@ namespace RifaTech.UI.Shared.Config
 
                 // Extra Numbers
                 public const string ExtraNumbersByRifa = "/rifas/{0}/extra-numbers"; // Formato: /rifas/guid/extra-numbers
+
                 public const string AddExtraNumber = "/rifas/{0}/extra-number"; // Formato: /rifas/guid/extra-number
 
                 // Unpaid Rifas
@@ -89,10 +92,10 @@ namespace RifaTech.UI.Shared.Config
 
                 // Adicionar na seção de Auth/Users em AppConfig.cs
                 public const string UserById = "/manage/users/{0}"; // Para operações em um usuário específico
+
                 public const string UpdateUserRole = "/manage/users/{0}/role"; // Para atualizar o papel de um usuário
                 public const string DeleteUser = "/manage/users/{0}"; // Para DELETE de um usuário
                 public const string UpdateUser = "/manage/users/{0}"; // Para UPDATE de um usuário
-
             }
         }
 

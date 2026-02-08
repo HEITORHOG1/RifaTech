@@ -17,6 +17,7 @@ namespace RifaTech.API.Repositories
 
         // Cache keys
         private const string ALL_RIFAS_CACHE_KEY = "all_rifas";
+
         private const string FEATURED_RIFAS_CACHE_KEY = "featured_rifas";
         private const string RIFA_BY_ID_CACHE_KEY_PREFIX = "rifa_";
 

@@ -12,8 +12,10 @@
         public string QrCodeBase64 { get; set; }
         public string QrCode { get; set; }
         public long? PaymentId { get; set; }
+
         // Add these properties
         public DateTime? ExpirationTime { get; set; }
+
         public int Status { get; set; } // 0=Pending, 1=Confirmed, 2=Expired
     }
 }

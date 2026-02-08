@@ -143,4 +143,3 @@ window.monitorElementChanges = (selector) => {
         return false;
     }
 };
-

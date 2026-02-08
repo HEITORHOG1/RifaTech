@@ -6,7 +6,6 @@ using RifaTech.UI.Shared.Config;
 using RifaTech.UI.Shared.Helpers;
 using RifaTech.UI.Shared.Models;
 using RifaTech.UI.Shared.Services;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
 using System.Security.Claims;
 
@@ -55,6 +54,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 
         return await _cachedAuthState;
     }
+
     public async Task InitializeAuthenticationStateAsync()
     {
         try
@@ -321,6 +321,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
             _http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         }
     }
+
     private IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
     {
         try
@@ -356,7 +357,3 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
         _semaphore?.Dispose();
     }
 }
-
-
-
-

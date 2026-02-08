@@ -17,8 +17,11 @@ namespace RifaTech.DTOs.Contracts
 
         // Novos métodos
         Task<UserDTO> GetUserByIdAsync(string id);
+
         Task<UserDTO> UpdateUserAsync(string id, UserDTO userDTO);
+
         Task<bool> DeleteUserAsync(string id);
+
         Task<UserDTO> UpdateUserRoleAsync(string id, string role);
     }
 }

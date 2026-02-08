@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RifaTech.DTOs.DTOs.AdminDashboard
+﻿namespace RifaTech.DTOs.DTOs.AdminDashboard
 {
     /// <summary>
     /// Consulta para pesquisa de tickets
@@ -13,11 +7,13 @@ namespace RifaTech.DTOs.DTOs.AdminDashboard
     {
         // Filtros primários
         public Guid? RifaId { get; set; }
+
         public Guid? ClienteId { get; set; }
         public int? TicketNumber { get; set; }
 
         // Filtros secundários
         public string RifaName { get; set; }
+
         public string ClienteName { get; set; }
         public string ClienteEmail { get; set; }
         public string ClientePhone { get; set; }
@@ -25,14 +21,17 @@ namespace RifaTech.DTOs.DTOs.AdminDashboard
 
         // Filtros de data
         public DateTime? CreatedAfter { get; set; }
+
         public DateTime? CreatedBefore { get; set; }
 
         // Ordenação
         public string OrderBy { get; set; } = "createdAt";
+
         public string OrderDirection { get; set; } = "desc";
 
         // Paginação
         public int PageNumber { get; set; } = 1;
+
         public int PageSize { get; set; } = 20;
     }
 

@@ -19,5 +19,4 @@ namespace RifaTech.UI.WinUI
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
     }
-
 }

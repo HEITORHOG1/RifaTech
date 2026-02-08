@@ -1,7 +1,5 @@
 ﻿// RifaTech.UI.Shared/Services/ClienteRecorrenteService.cs
 using RifaTech.DTOs.DTOs;
-using RifaTech.UI.Shared.Config;
-using System.Text.Json;
 
 namespace RifaTech.UI.Shared.Services
 {
