@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
+using RifaTech.API.Validators;
 using RifaTech.DTOs.Contracts;
 using RifaTech.DTOs.DTOs;
 
@@ -80,6 +81,7 @@ public static class ClienteEndpoints
         })
         .WithName("CreateCliente")
         .AllowAnonymous() // Allow anonymous for client creation
+        .WithValidation<ClienteDTO>()
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Criar um novo cliente",
@@ -111,6 +113,7 @@ public static class ClienteEndpoints
         })
         .WithName("UpdateCliente")
         .RequireAuthorization(policy => policy.RequireRole("Admin")) // Admin only
+        .WithValidation<ClienteDTO>()
         .WithOpenApi(x => new OpenApiOperation(x)
         {
             Summary = "Atualizar um cliente",

@@ -216,7 +216,7 @@ namespace RifaTech.API.Repositories
                 {
                     ClienteId = cliente.Id,
                     Method = "PIX",
-                    Amount = (float)valorTotal,
+                    Amount = valorTotal,
                     IsConfirmed = false,
                     QrCodeBase64 = mercadoPagoPayment.PointOfInteraction?.TransactionData?.QrCodeBase64 ?? "",
                     QrCode = mercadoPagoPayment.PointOfInteraction?.TransactionData?.QrCode ?? "",

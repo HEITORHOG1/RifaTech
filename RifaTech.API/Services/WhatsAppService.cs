@@ -112,7 +112,7 @@ namespace RifaTech.API.Services
         }
 
         public async Task<bool> SendPaymentConfirmationAsync(string phoneNumber, string clientName, string rifaName,
-            float totalValue, List<int> ticketNumbers, DateTime drawDateTime)
+            decimal totalValue, List<int> ticketNumbers, DateTime drawDateTime)
         {
             var message = $"✅ *Pagamento Confirmado - RifaTech* ✅\n\n" +
                           $"Olá *{clientName}*,\n\n" +

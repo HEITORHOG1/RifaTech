@@ -1,0 +1,144 @@
+@page "/admin/pagamentos"
+@using System.Net.Http.Json
+@using RifaTech.DTOs.DTOs
+@using RifaTech.UI.Shared.Config
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<PageTitle>Pagamentos - Admin RifaTech</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Payment" Class="mr-2" />
+        Gerenciar Pagamentos
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudContainer Class="d-flex flex-column align-center justify-center my-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.body1" Class="mt-4">Carregando pagamentos...</MudText>
+        </MudContainer>
+    }
+    else
+    {
+        <!-- Resumo -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="3" Class="pa-4 d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Class="mr-3" />
+                    <div>
+                        <MudText Typo="Typo.caption">Confirmados</MudText>
+                        <MudText Typo="Typo.h5">@_payments?.Count(p => p.IsConfirmed)</MudText>
+                    </div>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="3" Class="pa-4 d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Pending" Color="Color.Warning" Size="Size.Large" Class="mr-3" />
+                    <div>
+                        <MudText Typo="Typo.caption">Pendentes</MudText>
+                        <MudText Typo="Typo.h5">@_payments?.Count(p => !p.IsConfirmed && p.Status == 0)</MudText>
+                    </div>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="3" Class="pa-4 d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Primary" Size="Size.Large" Class="mr-3" />
+                    <div>
+                        <MudText Typo="Typo.caption">Total Recebido</MudText>
+                        <MudText Typo="Typo.h5">R$ @_payments?.Where(p => p.IsConfirmed).Sum(p => p.Amount).ToString("N2")</MudText>
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Tabela -->
+        <MudTable Items="_payments" Hover="true" Striped="true" Dense="true"
+                  Elevation="3" Filter="FilterFunc">
+            <ToolBarContent>
+                <MudTextField @bind-Value="_searchString" Placeholder="Buscar..."
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              IconSize="Size.Medium" Class="mt-0" />
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<PaymentDTO, object>(x => x.Id)">ID</MudTableSortLabel></MudTh>
+                <MudTh>Valor</MudTh>
+                <MudTh>Método</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Expiração</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">
+                    <MudText Typo="Typo.caption">@context.Id.ToString()[..8]...</MudText>
+                </MudTd>
+                <MudTd DataLabel="Valor">R$ @context.Amount.ToString("N2")</MudTd>
+                <MudTd DataLabel="Método">@(context.Method ?? "PIX")</MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.IsConfirmed)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">Confirmado</MudChip>
+                    }
+                    else if (context.Status == 2)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small">Expirado</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">Pendente</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Expiração">@context.ExpirationTime?.ToString("dd/MM/yyyy HH:mm")</MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    private List<PaymentDTO>? _payments;
+    private bool _loading = true;
+    private string _searchString = "";
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPaymentsAsync();
+    }
+
+    private async Task LoadPaymentsAsync()
+    {
+        try
+        {
+            _loading = true;
+            _payments = await Http.GetFromJsonAsync<List<PaymentDTO>>(
+                AppConfig.Api.Endpoints.Payments, _cts.Token)
+                ?? new List<PaymentDTO>();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar pagamentos: {ex.Message}", Severity.Error);
+            _payments = new List<PaymentDTO>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private bool FilterFunc(PaymentDTO payment)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString)) return true;
+        if (payment.Id.ToString().Contains(_searchString, StringComparison.OrdinalIgnoreCase)) return true;
+        if (payment.Method?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
+        return false;
+    }
+
+    public void Dispose() => _cts.Cancel();
+}

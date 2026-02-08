@@ -102,9 +102,15 @@
 
     private string GetImageUrl()
     {
-        return string.IsNullOrEmpty(Rifa.Base64Img)
-            ? "/images/default-rifa.jpg"
-            : $"data:image/png;base64,{Rifa.Base64Img}";
+        if (string.IsNullOrEmpty(Rifa.Base64Img))
+            return "/images/default-rifa.jpg";
+        
+        // Se já é um data URI completo (data:image/...), usa diretamente
+        if (Rifa.Base64Img.StartsWith("data:"))
+            return Rifa.Base64Img;
+        
+        // Caso contrário, assume que é base64 puro de PNG
+        return $"data:image/png;base64,{Rifa.Base64Img}";
     }
 
     private string FormatCurrency(decimal value)

@@ -20,7 +20,7 @@
         /// Send a payment confirmation notification
         /// </summary>
         Task<bool> SendPaymentConfirmationAsync(string phoneNumber, string clientName, string rifaName,
-            float totalValue, List<int> ticketNumbers, DateTime drawDateTime);
+            decimal totalValue, List<int> ticketNumbers, DateTime drawDateTime);
 
         /// <summary>
         /// Send a draw reminder notification

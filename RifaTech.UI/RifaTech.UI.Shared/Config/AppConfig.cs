@@ -46,7 +46,7 @@
                 public const string PaymentPix = "/payments/pix"; // Gerar pagamento PIX
 
                 // Compra Rápida
-                public const string CompraRapida = "/compra-rapida/{0}"; // Formato: /compra-rapida/guid
+                public const string CompraRapida = "/rifa/{0}/compra-rapida"; // Formato: /rifa/guid/compra-rapida
 
                 // Autenticação
                 public const string Auth = "/manage";

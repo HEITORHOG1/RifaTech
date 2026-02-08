@@ -27,7 +27,7 @@ else
     <MudPaper Class="pa-4 mb-6">
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudImage Src="@(string.IsNullOrEmpty(_rifa.Base64Img) ? "/images/default-rifa.jpg" : $"data:image/png;base64,{_rifa.Base64Img}")"
+                <MudImage Src="@GetRifaImage()"
                           Width="100" Height="200" ObjectFit="ObjectFit.Cover"
                           Elevation="2" Class="rounded-lg" />
             </MudItem>
@@ -446,11 +446,23 @@ else
         }
     }
 
+    private string GetRifaImage()
+    {
+        if (string.IsNullOrEmpty(_rifa?.Base64Img))
+            return "/images/default-rifa.jpg";
+        
+        // Se já é um data URI completo (data:image/...), usa diretamente
+        if (_rifa.Base64Img.StartsWith("data:"))
+            return _rifa.Base64Img;
+        
+        // Caso contrário, assume que é base64 puro de PNG
+        return $"data:image/png;base64,{_rifa.Base64Img}";
+    }
+
     // Implementar IDisposable para cancelar operações pendentes
     public void Dispose()
     {
         _cts?.Cancel();
         _cts?.Dispose();
     }
-}
 }

@@ -1,0 +1,112 @@
+@page "/tickets/meus"
+@using System.Net.Http.Json
+@using RifaTech.DTOs.DTOs
+@using RifaTech.UI.Shared.Config
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<PageTitle>Meus Tickets - RifaTech</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
+        Meus Tickets
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudContainer Class="d-flex flex-column align-center justify-center my-8">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.body1" Class="mt-4">Carregando seus tickets...</MudText>
+        </MudContainer>
+    }
+    else if (_tickets == null || !_tickets.Any())
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="my-4">
+            <MudText>Você ainda não comprou nenhum ticket.</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/rifas" Class="mt-2">
+                Ver Rifas Disponíveis
+            </MudButton>
+        </MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_tickets" Hover="true" Striped="true" Dense="true"
+                  Elevation="3" Class="mt-4">
+            <HeaderContent>
+                <MudTh>Número</MudTh>
+                <MudTh>Rifa</MudTh>
+                <MudTh>Data de Compra</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh>Ações</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Número">
+                    <MudChip T="string" Color="Color.Primary" Size="Size.Small">
+                        #@context.Number
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Rifa">@(context.Rifa?.Name ?? "—")</MudTd>
+                <MudTd DataLabel="Data">@(context.CreatedAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</MudTd>
+                <MudTd DataLabel="Status">
+                    @if (context.PaymentId != null)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">Confirmado</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">Pendente</MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Ações">
+                    @if (context.RifaId != Guid.Empty)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                       Size="Size.Small" Color="Color.Primary"
+                                       Href="@($"/rifas/{context.RifaId}")" />
+                    }
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 25, 50 }" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    private List<TicketDTO>? _tickets;
+    private bool _loading = true;
+    private CancellationTokenSource _cts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTicketsAsync();
+    }
+
+    private async Task LoadTicketsAsync()
+    {
+        try
+        {
+            _loading = true;
+            _tickets = await Http.GetFromJsonAsync<List<TicketDTO>>(
+                AppConfig.Api.Endpoints.MyTickets, _cts.Token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Erro ao carregar tickets: {ex.Message}", Severity.Error);
+            _tickets = new List<TicketDTO>();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public void Dispose() => _cts.Cancel();
+}

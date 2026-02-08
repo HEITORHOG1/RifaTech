@@ -7,7 +7,11 @@ namespace RifaTech.DTOs.DTOs
         public Guid Id { get; set; }
         public Guid RifaId { get; set; }
         public int Number { get; set; }
-        public float PrizeAmount { get; set; }
+
+        /// <summary>
+        /// Valor do prêmio. Usar decimal para precisão monetária.
+        /// </summary>
+        public decimal PrizeAmount { get; set; }
 
         [JsonIgnore]
         public RifaDTO? Rifa { get; set; }

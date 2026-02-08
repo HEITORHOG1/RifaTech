@@ -29,6 +29,7 @@ namespace RifaTech.API.Services
             _clienteService = clienteService;
             _ticketService = ticketService;
             _paymentService = paymentService;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
